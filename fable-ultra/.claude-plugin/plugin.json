@@ -1,0 +1,19 @@
+{
+  "name": "fable-ultra",
+  "version": "4.1.2",
+  "description": "Practical AI operating system for Claude Code: an ultra-code plan/build/verify/loop workflow plus 26 verified skills — software, Android, AI/RAG, vision-OCR, trading (paper-default), astrology, QS/Excel/docs, agents, MCP, skill/agent/algorithm factories, knowledge lake, governance gates, and self-upgrade. Honest: orchestration + governance over real capabilities, not AGI, no guaranteed profit.",
+  "author": {
+    "name": "Gobiraj",
+    "email": "gobiraj1988@gmail.com"
+  },
+  "keywords": [
+    "workflow",
+    "orchestration",
+    "prompt-engineering",
+    "token-efficiency",
+    "trading",
+    "agents",
+    "android",
+    "mcp"
+  ]
+}

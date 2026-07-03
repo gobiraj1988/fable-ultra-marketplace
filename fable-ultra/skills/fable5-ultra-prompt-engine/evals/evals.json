@@ -1,0 +1,54 @@
+{
+  "skill_name": "fable5-ultra-prompt-engine",
+  "evals": [
+    {
+      "id": 1,
+      "name": "vague-goal-android-game",
+      "prompt": "yo can you make me a prompt for building an android idle tycoon game, something with prestige mechanics and offline earnings that i can monetize with ads. keep it tight",
+      "expected_output": "A single copy-pastable prompt (labeled skeleton), GAME + ANDROID lens: covers core idle loop, prestige/reset mechanic, offline earnings, monetization justified against retention, Kotlin/engine + platform constraints. Compressed, no filler, ends as a clean prompt block.",
+      "files": [],
+      "expectations": [
+        "Output is a single copy-pastable prompt in a fenced code block (a prompt, not an executed game or preamble chatter)",
+        "Prompt uses the labeled skeleton (ROLE / MISSION / BUILD / CONSTRAINTS / OUTPUT or clear equivalent)",
+        "Prompt specifies the idle-game core loop (generators / auto-income)",
+        "Prompt includes a prestige / reset-for-permanent-multiplier mechanic",
+        "Prompt specifies offline earnings (income accrues while the app is closed)",
+        "Prompt covers ad monetization AND ties placements to retention / non-predatory design",
+        "Prompt reflects the Android/mobile platform (Kotlin/Compose or an engine, plus platform/store constraints)",
+        "Prompt stays tight per 'keep it tight' (STANDARD or QUICK depth, not an ULTRA blueprint; roughly under 400 words)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "compress-existing-prompt",
+      "prompt": "compress this into a lean prompt: 'So I was hoping that maybe you could possibly help me build some kind of a dashboard, I think in React would be nice, that shows a bunch of analytics and metrics for my SaaS business, like revenue and churn and active users and stuff, and it should look modern and be responsive on mobile too if possible, and maybe have some charts. Thank you so so much!'",
+      "expected_output": "A compressed prompt preserving all real requirements (React, analytics dashboard, revenue/churn/active-users metrics, charts, responsive/mobile, modern look) while stripping hedging and pleasantries. WEB lens: component architecture, data/loading states, charts, responsive, performance. Output is a single prompt block; noticeably shorter than input but no signal lost.",
+      "files": [],
+      "expectations": [
+        "Output is a single copy-pastable prompt block, noticeably shorter and denser than the input paragraph",
+        "Hedging and pleasantries are stripped (no 'hoping', 'maybe', 'possibly', 'thank you so so much')",
+        "All real requirements preserved: React, analytics dashboard, revenue, churn, active users, charts, responsive/mobile, modern look",
+        "Uses the labeled skeleton and a WEB (frontend) lens",
+        "Adds relevant best-practice coverage (component structure, loading/empty/error states, or a charting approach) without inventing unrelated scope",
+        "Any load-bearing assumption (data source, charting library) is flagged, or the prompt instructs the model to state assumptions"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "ultra-mode-saas-blueprint",
+      "prompt": "I need an ULTRA prompt for building a multi-tenant SaaS invoicing platform with Stripe billing, role-based permissions, and an audit log. Give me the full production blueprint prompt.",
+      "expected_output": "An ULTRA-depth prompt (SOFTWARE lens): architecture, multi-tenant data model + isolation, Stripe billing integration, RBAC, audit logging, security, testing, scalability, monitoring, rollout. Deeper than STANDARD. Single prompt block, honors the explicit ULTRA mode request.",
+      "files": [],
+      "expectations": [
+        "Output is a single copy-pastable prompt block honoring the explicit ULTRA depth",
+        "Covers multi-tenant architecture AND tenant data isolation",
+        "Covers Stripe billing integration (subscriptions / invoicing / webhooks)",
+        "Covers role-based access control / permissions",
+        "Covers audit logging",
+        "Includes production-blueprint dimensions beyond STANDARD: at least testing, security, scalability, observability/monitoring, and deployment/rollout",
+        "Is clearly deeper and longer than a STANDARD prompt (reflects ULTRA mode)",
+        "Uses the SOFTWARE lens and the labeled skeleton (or XML delimiters)"
+      ]
+    }
+  ]
+}

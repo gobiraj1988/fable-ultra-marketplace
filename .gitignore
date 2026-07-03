@@ -1,0 +1,7 @@
+﻿# non-plugin artifacts (keep the marketplace repo clean)
+btc-momentum-paper/
+*.zip
+*.plugin
+.claude/
+Thumbs.db
+.DS_Store

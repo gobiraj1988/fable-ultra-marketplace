@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "fable-ultra-example-local": {
+      "comment": "SAMPLE ONLY — replace with real servers you need. stdio server pattern (Windows-friendly).",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "J:\\fable 5"]
+    }
+  },
+  "_connector_notes": {
+    "how_to_add": "Register servers with `claude mcp add <name> -- <command>` or edit this file. claude.ai connectors (LSEG, Daloopa, GitHub, Notion, Slack, etc.) are authorized in claude.ai connector settings, or via /mcp in an interactive claude session.",
+    "per_skill_requirements": {
+      "software-build": ["github (optional)", "web search (built-in)"],
+      "android-app": ["github (optional)", "figma (optional, for design handoff)"],
+      "trading-bot": ["market data: LSEG plugin or broker MCP or public APIs via WebFetch", "zapier (optional, alerts)"],
+      "agent-system": ["exa/web search", "github (optional)", "zapier (optional)"],
+      "mcp-connector": ["mcp-registry (discovery)", "zapier (9000+ app bridge)"],
+      "astrology-report": ["none required; WebFetch for geocoding, zapier optional for delivery"]
+    },
+    "rule": "If a skill's required connector is not connected/authorized, the skill STOPS and reports the setup steps. Connector output is never simulated."
+  }
+}

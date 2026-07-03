@@ -1,0 +1,17 @@
+# fable-ultra lessons memory
+
+One dated line per lesson, appended after each significant run. Read by model-max at the start
+of every run. Format: `YYYY-MM-DD [skill] lesson`.
+
+2026-07-03 [ultra-code] Verified loop pattern works: failed verify -> re-queued fix item -> passed in 4 iterations (btc-momentum-paper test drive).
+2026-07-03 [trading-bot] Report losing backtests as-is (-24% vs buy-hold -50.6%); honest metrics build user trust and catch bad strategies early.
+2026-07-03 [general] PowerShell 5.1 displays UTF-8-no-BOM em-dashes as mojibake; it is a display artifact, not file corruption — don't "fix" the file.
+2026-07-03 [self-upgrade] 'claude plugin update' requires the marketplace-qualified name (fable-ultra@fable-ultra-marketplace); bare name fails with 'not found'.
+2026-07-03 [ai-builder/vision-ocr] Adversarial verifiers caught real code bugs in skill examples (None-crash in pdfplumber check, stale hardcoded model names) — always verify skill code snippets, not just prose.
+2026-07-03 [v3-omega] Built 7 factory/brain skills via workflow; adversarial verifiers caught 4 real blockers (PowerShell bash-brace-expansion, phantom 'Workflow resumeFromRunId' tool, wrong agent() signature, misattributed OMEGA laws) — verify code snippets AND cross-skill integration claims, not just prose.
+2026-07-03 [general] agent() opts: canonical form is agent(promptString, {label, schema, model, phase}); pass task text first, stage name as label — not the label as the prompt.
+2026-07-03 [x-omega] Built 3 X capstones; adversarial verifier caught workflow-factory's OWN node --check gate as UNSOUND (regex not singleline + .js vs .mjs let broken templates falsely pass exit 0). Independently re-tested the fix: good->exit0, broken->exit1. A verification tool must itself be verified (Law 02).
+2026-07-03 [x-omega] KNOWN FOLLOW-UP: ecosystem-orchestrator names gates (truth-gate/evidence-gate/...) that don't exist in governance-core's 4-class model (routine/expensive/risky/irreversible) — cross-skill naming drift, queued as next improvement cycle.
+2026-07-03 [ai-os] v4.1.0 built with NO multi-agent workflow — direct edits only — to honor the token-minimization goal; added ai-os doctrine + algorithm-factory, fixed ecosystem-orchestrator gate names. Demonstrates AI-OS procedure #4: prefer direct edits over workflows for small/known work (a workflow costs 100k-900k tokens).
+2026-07-03 [loop] Converged the meta-build loop after v4.1.0: no further HIGH-VALUE meta-improvement exists, so continued looping would burn tokens for cosmetic-only gains — against the OS's own token rule. Continuous evolution now proceeds via REAL tasks feeding self-upgrade, not an empty loop.
+2026-07-03 [omega-prime] Adopted OMEGA PRIME by EDITING IN PLACE (constitution Evolution rule + knowledge-lake provenance + stored doctrine) — ZERO new skills/layers, honoring the doctrine's own 'do not evolve by adding layers/versions/prompts' rule. Skill count stayed 26. This is the model for all future doctrine changes.

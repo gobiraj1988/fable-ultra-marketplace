@@ -1,0 +1,14 @@
+{
+  "name": "fable-ultra-marketplace",
+  "owner": {
+    "name": "Gobiraj",
+    "email": "gobiraj1988@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "fable-ultra",
+      "source": "./fable-ultra",
+      "description": "Token-efficient autonomous build engine: ultra-code workflow, prompt engine, and domain builders (software, Android, trading paper-mode, agents, MCP, astrology)."
+    }
+  ]
+}
