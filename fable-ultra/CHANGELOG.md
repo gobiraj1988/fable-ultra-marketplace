@@ -1,5 +1,12 @@
 # Changelog — fable-ultra
 
+## 4.1.3 — 2026-07-04 — skill-description length fix
+
+- Shortened `meta-brain` (1164->900) and `workflow-factory` (1037->860) skill descriptions. The
+  Cowork validator caps each skill's `description` frontmatter at 1024 chars; these two were over,
+  blocking the plugin upload ("field 'description' in SKILL.md must be at most 1024 characters").
+  Trigger phrases preserved; no behavior change. All 26 skill descriptions now <=1024.
+
 ## 4.1.2 — 2026-07-04 — packaging fix
 
 - Shortened `plugin.json` description from 654 to under 500 chars. The Cowork/marketplace validator
