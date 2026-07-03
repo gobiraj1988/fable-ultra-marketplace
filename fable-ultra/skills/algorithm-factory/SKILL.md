@@ -1,6 +1,6 @@
 ---
 name: algorithm-factory
-description: Generate, test, benchmark, compare, and promote algorithms/strategies so only a MEASURED winner enters production. Use when the user needs the best concrete approach for a problem — sorting/matching/ranking/pricing/routing/scheduling logic, a heuristic vs exact trade-off, an ML/rule choice, or "find the fastest/most accurate way to do X". Differs from skill-factory (creates SKILLS) and trading-bot (backtests a full trading strategy): algorithm-factory picks the winning ALGORITHM by measured benchmark. Governed by omega-constitution.
+description: Generate, test, benchmark, compare, and promote algorithms/strategies so only a MEASURED winner enters production. Use when the user needs the best concrete approach for a problem — sorting/matching/ranking/pricing/routing/scheduling logic, a heuristic vs exact trade-off, an ML/rule choice, or "find the fastest/most accurate way to do X". Differs from skill-factory (creates SKILLS) and trading-bot (backtests a full trading strategy) - algorithm-factory picks the winning ALGORITHM by measured benchmark. Governed by omega-constitution.
 ---
 
 # Algorithm Factory — Benchmark-Gated Selection

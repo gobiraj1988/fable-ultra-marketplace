@@ -1,5 +1,16 @@
 # Changelog — fable-ultra
 
+## 4.1.4 — 2026-07-04 — valid-YAML hardening (all 26 skills load on any parser)
+
+- Removed `": "` (colon-space) from 6 skill descriptions (agent-factory, algorithm-factory,
+  dream-factory, ecosystem-orchestrator, knowledge-lake, research-council). A colon-space in an
+  unquoted YAML scalar is invalid and a strict parser drops the skill. Lenient parsers (current
+  Claude surfaces) tolerated it, but this removes the latent risk. Verified: all 26 SKILL.md
+  frontmatters now pass a strict YAML parse (pyyaml) AND every description is <=1024.
+- Context: Claude chat showing 24/26 was a STALE SYNC of the pre-4.1.3 commit (meta-brain +
+  workflow-factory descriptions were >1024 there and got dropped). Re-sync the marketplace to
+  pick up 4.1.4 and all 26 skills.
+
 ## 4.1.3 — 2026-07-04 — skill-description length fix
 
 - Shortened `meta-brain` (1164->900) and `workflow-factory` (1037->860) skill descriptions. The
