@@ -84,7 +84,7 @@ Maintain a real leaderboard so routing improves from evidence, not vibes (Laws 4
   provably fails a task class. Create the section header + table header once, then append valid
   table rows (leading/trailing pipes, matching column count) so they render inside that table:
   ```powershell
-  if ($null -eq (Select-String -Path $lb -Pattern '^## Failures' -Quiet)) {
+  if (-not (Select-String -Path $lb -Pattern '^## Failures' -Quiet)) {
     Add-Content $lb "`n## Failures`n| date | task type | model | what broke |`n|---|---|---|---|" -Encoding utf8
   }
   Add-Content $lb "| $(Get-Date -Format yyyy-MM-dd) | <task type> | <model> | <what broke> |" -Encoding utf8

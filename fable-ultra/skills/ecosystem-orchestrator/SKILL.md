@@ -65,7 +65,7 @@ lesson to `memory/lessons.md` and to `knowledge-lake` (X-LAW 07).
 ## 4. RUN-STATE + RECOVERY (Windows-friendly)
 - Store the launch run-id and per-stage status in `ecosystem-run.md` and a machine-readable
   `run-state.json` beside it.
-- Long/background stages use the Task tools + the `schedule`/`cron` skills. There is NO standalone
+- Long/background stages use the Task tools + the `schedule` skill (or the CronCreate/CronList/CronDelete tools). There is NO standalone
   "Workflow resumeFromRunId" background-recovery tool — to recover, RELAUNCH from the run-state file:
   read `run-state.json`, then call `Workflow({scriptPath})` (optionally `resumeFromRunId` from that file).
 - PowerShell (no bash brace-expansion): enumerate stages as

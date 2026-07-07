@@ -1,5 +1,25 @@
 # Changelog — fable-ultra
 
+## 4.1.5 — 2026-07-07 — full-plugin audit fixes (6 verified defects)
+
+Five-dimension adversarial audit (cross-refs, code snippets, paths, docs, triggers). Confirmed
+defects fixed; every fix re-verified by execution where applicable:
+
+- MAJOR `research-council`: Workflow sketch used a wrong agent() shape (object arg + nonexistent
+  `role` opt) and fed `parallel()` promises instead of thunks — rewritten to the canonical
+  `agent(prompt, {label, schema, model})` / `parallel(thunks)`; now node-syntax-verified; also adds
+  the Economist to the sketch roles (matching its own table).
+- `model-router`: `$null -eq (Select-String -Path .. -Quiet)` guard was dead code (with -Path,
+  no-match returns False, not null) — the `## Failures` section could never be created. Fixed to
+  `-not (...)`; verified by execution (creates once, no duplicate on re-run).
+- `self-upgrade`: evidence step pointed at `ultra-code-run.md` "under the plugin directory" — they
+  are written in project working directories; corrected so evidence gathering looks where files are.
+- `ecosystem-orchestrator` + `governance-core`: referenced a nonexistent `cron` skill — corrected
+  to the `schedule` skill / Cron tools.
+- `README.md`: stale v1 opening ("six grounded domain-builder skills") — now reflects 26 skills.
+- Trigger-overlap dimension: reviewed inline; all overlapping descriptions already carry explicit
+  differs/defer notes — no unmitigated overlap found.
+
 ## 4.1.4 — 2026-07-04 — valid-YAML hardening (all 26 skills load on any parser)
 
 - Removed `": "` (colon-space) from 6 skill descriptions (agent-factory, algorithm-factory,

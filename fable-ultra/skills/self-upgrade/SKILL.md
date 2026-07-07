@@ -10,7 +10,7 @@ Never claim consciousness, general intelligence, or capabilities beyond editing 
 
 ## The Upgrade Loop (mandatory order — do not skip or reorder steps)
 
-1. **Gather evidence.** Read `J:\fable 5\fable-ultra\memory\lessons.md`, the most recent `ultra-code-run.md` files under the plugin directory, and any user feedback in this conversation. List concrete failure observations (missed trigger, vague instruction, repeated mistake). No evidence = no upgrade; say so and stop.
+1. **Gather evidence.** Read `J:\fable 5\fable-ultra\memory\lessons.md`, the most recent `ultra-code-run.md` files in recent project working directories (ultra-code/model-max write them where the project runs, NOT under the plugin directory), and any user feedback in this conversation. List concrete failure observations (missed trigger, vague instruction, repeated mistake). No evidence = no upgrade; say so and stop.
 2. **Pick exactly ONE weakest skill** this cycle, chosen by the evidence — the skill with the most/severest observations. Never guess, never pick two.
 3. **Backup first.** Copy the target before touching it:
    ```powershell

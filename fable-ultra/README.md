@@ -1,7 +1,8 @@
 # fable-ultra
 
-A Claude Code plugin bundling a token-efficient autonomous build engine (**ultra-code**), the
-**fable5-ultra-prompt-engine**, and six grounded domain-builder skills.
+A Claude Code plugin — a practical AI operating system bundling the **ultra-code** autonomous
+build engine, **model-max** any-model quality forcing, factories (skill/agent/algorithm/workflow),
+knowledge + governance layers, and grounded domain builders — **26 verified skills** in total.
 
 ## What's inside
 

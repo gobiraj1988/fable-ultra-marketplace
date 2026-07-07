@@ -35,27 +35,25 @@ outputs are structured, and `resumeFromRunId` on re-runs to reuse cached role wo
 
 ```js
 // Sketch — adapt prompts/schemas to the real question. Not run verbatim.
+// Canonical API: agent(promptString, {label, schema, model, phase}) · parallel(thunks) · pipeline(items, ...stages)
 const question = "<the decision to resolve>";
-const critIC = tier("critic");      // escalated tier — see model-router below
-const std    = tier("standard");
+const ROLES = ["scientist","critic","builder","tester","auditor","economist","riskofficer","strategist"];
+const esc = (r) => (r === "critic" || r === "auditor") ? "opus" : undefined; // escalate adversarial seats (model-router)
 
-// 1) INDEPENDENT RESEARCH — barrier: all views formed before anyone reads another
-const views = await parallel(
-  ["scientist","critic","builder","tester","auditor","riskofficer","strategist"]
-    .map(r => agent({ role:r, model: (r==="critic"||r==="auditor")?critIC:std,
-                      prompt: rolePrompt(r, question), schema: ViewSchema }))
-);
+// 1) INDEPENDENT RESEARCH — parallel(THUNKS) barrier: all views formed before anyone reads another
+const views = await parallel(ROLES.map(r => () =>
+  agent(rolePrompt(r, question), { label: r, model: esc(r), schema: ViewSchema })));
 // 2) CROSS-EXAMINATION — each reads all others, flags disagreements
-const xexam = await parallel(views.map(v =>
-  agent({ prompt: crossExamPrompt(v, views), schema: DisagreementSchema })));
+const xexam = await parallel(views.map((v, i) => () =>
+  agent(crossExamPrompt(v, views), { label: "xexam:" + ROLES[i], schema: DisagreementSchema })));
 // 3) DEBATE — challenge the flagged assumptions head-on
-const debate = await agent({ prompt: debatePrompt(views, xexam), schema: DebateSchema });
-// 4) CONSENSUS ATTEMPT — where do all seven agree / where is it irreducibly split
-const consensus = await agent({ prompt: consensusPrompt(debate), schema: ConsensusSchema });
+const debate = await agent(debatePrompt(views, xexam), { label: "debate", schema: DebateSchema });
+// 4) CONSENSUS ATTEMPT — where do all eight agree / where is it irreducibly split
+const consensus = await agent(consensusPrompt(debate), { label: "consensus", schema: ConsensusSchema });
 // 5) VERIFICATION PASS — re-check every load-bearing claim against its cited source (Law 05)
-const verified = await agent({ model: critIC, prompt: verifyPrompt(consensus), schema: VerifySchema });
+const verified = await agent(verifyPrompt(consensus), { label: "verify", model: "opus", schema: VerifySchema });
 // 6) RECOMMENDATION — Strategist writes the decision using ONLY verified claims
-const decision = await agent({ prompt: decisionPrompt(verified), schema: DecisionSchema });
+const decision = await agent(decisionPrompt(verified), { label: "decision", schema: DecisionSchema });
 ```
 
 If you are not running an explicit Workflow, execute the same six stages inline yourself in the

@@ -95,7 +95,7 @@ Bypass attempts get an audit line with decision `BLOCK` and reason `immutable-ra
 Before a gated action, a caller runs the classification (§1) and produces the decision block (§2),
 then either proceeds (ALLOW), refuses (BLOCK), or stops for the human (NEEDS-APPROVAL). In a
 Workflow script this is a `phase` before the acting `agent(...)` call; automated/scheduled runs
-use the `schedule`/`cron` skills and Task tools and MUST still stop at NEEDS-APPROVAL rather than
+use the `schedule` skill (or Cron tools) and Task tools and MUST still stop at NEEDS-APPROVAL rather than
 self-approve. There is no background auto-approver.
 
 ## 8. Honesty (X-LAW 03/10)
