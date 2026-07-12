@@ -12,7 +12,7 @@ Build OCR/vision extraction tools. Every claim below maps to a real mechanism �
 | Input | Engine | Why |
 |---|---|---|
 | Born-digital PDF (has a text layer) | pdfplumber / pdf.js — extract text directly. NEVER OCR it | OCR degrades perfect text. Check for a text layer FIRST — across pages, None-safe: `python -c "import pdfplumber; d=pdfplumber.open('doc.pdf'); print([bool(p.extract_text()) for p in d.pages])"` (mixed True/False = hybrid PDF: extract text pages directly, OCR only the False pages) |
-| Clean printed scans, high volume, zero budget | Tesseract locally (`choco install tesseract` / `winget install UB-Mannheim.TesseractOCR`) | Free, fast, good on clean print |
+| Clean printed scans, high volume, zero budget | Tesseract locally (Windows: `choco install tesseract` / `winget install UB-Mannheim.TesseractOCR`; Linux: `sudo apt-get install tesseract-ocr`; macOS: `brew install tesseract`) | Free, fast, good on clean print |
 | Complex layouts, tables, handwriting, drawings, mixed content | Claude vision API — send the image, ask for structured output | Layout understanding beats character-level OCR |
 | Production systems | Hybrid: cheap engine first, escalate hard pages to the vision model | Cost control without accuracy loss |
 
@@ -63,9 +63,9 @@ Tight-schema extraction works well on small/cheap vision tiers. Pattern:
 - [ ] A labeled-sample accuracy report (>= 20 docs, field-level numbers)
 - [ ] A human-review queue file (CSV/JSON) for low-confidence and `[UNREADABLE]` items
 
-Windows quick checks:
+Quick checks (any shell — PowerShell or bash; install Tesseract per the engine table above):
 
-```powershell
+```sh
 tesseract --version                              # engine present?
 python -m pip install pdfplumber pytesseract pillow anthropic
 python -c "import pdfplumber; p=pdfplumber.open('doc.pdf'); print(bool(p.pages[0].extract_text()))"  # text layer?

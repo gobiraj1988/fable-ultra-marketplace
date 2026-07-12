@@ -24,7 +24,8 @@ Real mechanisms only: local files, subagents (adversarial reviewers), the Workfl
 
 1. **Prefer skill-creator.** If the `skill-creator` plugin skill is installed, invoke it for the
    scaffold, best-practice structure, and eval harness. If absent, follow this template directly.
-2. **Choose a kebab-case `<name>`** and create `J:\fable 5\fable-ultra\skills\<name>\SKILL.md`.
+2. **Choose a kebab-case `<name>`** and create `skills/<name>/SKILL.md` under the plugin root
+   (resolve via `${CLAUDE_PLUGIN_ROOT}` when set).
 3. **Write valid YAML frontmatter** — `---`, `name: <name>`, `description:` (one paragraph, packed
    with concrete trigger phrases, and noting if it defers to or differs from a similarly-named
    existing skill), `---`. No tabs. Then a concrete, imperative, numbered body with tables — never
@@ -37,7 +38,7 @@ Real mechanisms only: local files, subagents (adversarial reviewers), the Workfl
 
 Never register an unverified skill. Run all three gates:
 
-1. **Frontmatter parses** — run the PowerShell snippet in section 6. Must print `OK`.
+1. **Frontmatter parses** — run the validator snippet in section 6 (POSIX or PowerShell). Must print `OK`.
 2. **Adversarial review** — spawn a subagent whose only job is to REFUTE the skill: run the draft against 2–3 realistic user scenarios and hunt for wrong triggers, impossible claims, faked connector output, missing rails, or steps that cannot run. Fix every finding.
 3. **No impossible claims** — no literal-AGI/consciousness claims, no fabricated benchmarks, no "trains frontier models". Reject any such line before shipping.
 
@@ -51,11 +52,12 @@ If any gate cannot pass, do NOT register. Report BLOCKED with the reason.
 
 ## 4. VERSION + REGISTER + PUBLISH
 
-Skills auto-register by living in `skills/<name>/SKILL.md` — no registry edit needed. Then:
+Skills auto-register by living in `skills/<name>/SKILL.md` — no registry edit needed. Once loaded,
+they are invoked namespaced as `fable-ultra:<name>`. Then:
 
-1. **Version bump** `J:\fable 5\fable-ultra\.claude-plugin\plugin.json`: minor bump (x.Y+1.0) for a
+1. **Version bump** `.claude-plugin/plugin.json` (plugin root): minor bump (x.Y+1.0) for a
    new skill/capability, patch (x.y.Z+1) for a small template/asset.
-2. **Append a dated entry** to `J:\fable 5\fable-ultra\CHANGELOG.md` naming the new asset and its
+2. **Append a dated entry** to the plugin's `CHANGELOG.md` naming the new asset and its
    verification result.
 3. **Tell the user to reload** — the marketplace-qualified name is REQUIRED (the bare name fails
    with "not found"):
@@ -71,7 +73,7 @@ The same DETECT → GENERATE → VERIFY → VERSION pipeline emits other plugin 
 | Asset | Location | Verify |
 |-------|----------|--------|
 | Command | `commands/<name>.md` | Parses; dry-run the described action |
-| MCP server config | `.mcp.json` (stdio/Windows-friendly) | STOP if the server is not actually connected; never fake its output |
+| MCP server config | `.mcp.json` (stdio, cross-platform command lines) | STOP if the server is not actually connected; never fake its output |
 | Prompt pack | `skills/<name>/prompts/` or a template file | Adversarial review as in section 3 |
 | Template | `skills/<name>/templates/` | Fill it once end-to-end and check the result |
 
@@ -82,15 +84,23 @@ until the user authorizes the server (claude.ai connector settings, or `claude m
 
 Before declaring a skill DONE, confirm each: [ ] `<name>` kebab-case, folder created ·
 [ ] frontmatter parses (snippet below) · [ ] description carries concrete trigger phrases and
-disambiguates from similar skills · [ ] body is imperative, numbered, uses tables ·
+disambiguates from similar skills · [ ] description <= 1024 chars and plugin.json description
+<= 500 chars (validator limits) · [ ] body is imperative, numbered, uses tables ·
 [ ] every step maps to a real mechanism · [ ] absent-connector steps STOP-and-report ·
 [ ] adversarial review passed on 2–3 scenarios · [ ] no impossible/fabricated claims ·
 [ ] rails intact · [ ] plugin.json bumped · [ ] CHANGELOG appended · [ ] reload command given.
 
-PowerShell frontmatter validator (Windows):
+Frontmatter validator — run from the plugin root (`${CLAUDE_PLUGIN_ROOT}` when set). POSIX (works
+in any shell with python3):
+
+```sh
+python3 -c "import yaml,sys; d=yaml.safe_load(open('skills/<name>/SKILL.md').read().split('---',2)[1]); assert d['name'] and d['description'], 'missing name/description'; assert len(str(d['description']))<=1024, 'description over 1024 chars'; print('OK')"
+```
+
+PowerShell equivalent (Windows):
 
 ```powershell
-$p = "J:\fable 5\fable-ultra\skills\<name>\SKILL.md"
+$p = "skills\<name>\SKILL.md"
 $t = Get-Content $p -Raw
 if ($t -notmatch "(?s)^---\r?\n(.*?)\r?\n---") { Write-Error "No frontmatter fence"; exit 1 }
 $fm = $Matches[1]
@@ -100,10 +110,13 @@ if ($fm -notmatch "(?m)^description:\s*\S") { Write-Error "Missing description";
 Write-Output "OK"
 ```
 
+Length gates (Cowork validator): SKILL.md `description:` <= 1024 chars; `plugin.json`
+description <= 500 chars. Over-limit = fix before shipping.
+
 ## 7. Safety rails — never generate them away
 
 A generated skill must NEVER strip or weaken: paper-mode-default for trading · human confirmation for live orders, money movement, sends, publishes, or deletions (Law 10) · no fabricated connector output · loop-termination ceilings · the STOP-and-report requirement when a connector is absent. If a request asks the factory to omit a rail so a task "passes", refuse and report why.
 
 ## 8. Log to knowledge-lake and lessons (Law 07)
 
-After a skill ships (or is blocked), record it. Append one line to `J:\fable 5\fable-ultra\memory\lessons.md` — what was missing, what was created, how it verified, any failure to avoid next time — and register the asset in the `knowledge-lake` (source-attributed) so future DETECT passes and `self-upgrade` see what already exists. No log = the cycle is not complete.
+After a skill ships (or is blocked), record it. Append one line to `memory/lessons.md` under the plugin root (resolve via `${CLAUDE_PLUGIN_ROOT}` when set) — what was missing, what was created, how it verified, any failure to avoid next time — and register the asset in the `knowledge-lake` (source-attributed) so future DETECT passes and `self-upgrade` see what already exists. No log = the cycle is not complete.

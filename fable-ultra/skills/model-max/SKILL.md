@@ -1,6 +1,6 @@
 ---
 name: model-max
-description: Quality-forcing engine of the fable-ultra plugin. Makes the currently selected Claude model (Haiku, Sonnet, Opus, any tier) execute at its maximum achievable quality by enforcing strict process discipline — planning before work, one-item-at-a-time builds, verification by execution, and mandatory self-critique. Automatically loaded by the ultra-code skill at the start of every run. Also triggers when the user says "get maximum quality from this model", "work like a stronger model", "model max", or starts any substantive build, coding, or document task under fable-ultra.
+description: Quality-forcing engine of the fable-ultra plugin. Makes the currently selected Claude model (Haiku, Sonnet, Opus, Fable 5, any tier) execute at its maximum achievable quality by enforcing strict process discipline — planning before work, one-item-at-a-time builds, verification by execution, and mandatory self-critique. Automatically loaded by the ultra-code skill at the start of every run. Also triggers when the user says "get maximum quality from this model", "work like a stronger model", "model max", or starts any substantive build, coding, or document task under fable-ultra.
 ---
 
 # Model Max — Process Discipline Engine
@@ -14,23 +14,32 @@ description: Quality-forcing engine of the fable-ultra plugin. Makes the current
 3. **Plan smaller than feels necessary.** Break work into items each completable AND verifiable in one step. If an item cannot be verified in one step, split it again.
 4. **Build ONE item at a time.** After each item, VERIFY by actually executing — run the code, recalculate the spreadsheet, render the document. Re-reading your own output is NOT verification.
    ```powershell
-   # Example: verify, don't assume
+   # Example: verify, don't assume (PowerShell)
    python .\script.py; if ($LASTEXITCODE -ne 0) { "ITEM FAILED - fix before next item" }
    ```
+   ```sh
+   # POSIX equivalent
+   python script.py || echo "ITEM FAILED - fix before next item"
+   ```
+   In a Workflow, give verify/judge agents a higher reasoning **effort** than build agents
+   (`effort: 'high'`/`'max'` on verify, `'low'` on mechanical items) — effort is a quality dial
+   on the SAME model, applied before reaching for a bigger one.
 5. **Self-critique pass.** After all items: find at least 3 concrete flaws in your own output and fix them. Repeat the critique until a pass finds zero real flaws. Maximum 3 passes — do not pad passes with fake flaws to hit the count; "concrete" means reproducible or pointable-to.
 6. **Done = evidence.** Declare done ONLY when the step-1 done-condition is met AND you quote the execution evidence (command output, exit code, rendered result).
-7. **Honest stop rule.** If the same defect survives 2 fix attempts, STOP. Tell the user plainly: "This task may need a stronger model. What failed: <specific defect and what was tried>." Never fake success, never silently narrow scope to dodge the failure.
+7. **Honest stop rule.** If the same defect survives 2 fix attempts, STOP. First retry once at higher reasoning effort on the same model; if it still fails, tell the user plainly: "This task may need a stronger model — escalate one tier (ceiling: Fable 5 at effort max). What failed: <specific defect and what was tried>." Never fake success, never silently narrow scope to dodge the failure.
 
 ## MEMORY HOOKS
 
-- **Before starting:** read `J:\fable 5\fable-ultra\memory\lessons.md` if it exists; apply any lesson relevant to this task type.
-  ```powershell
-  if (Test-Path "J:\fable 5\fable-ultra\memory\lessons.md") { Get-Content "J:\fable 5\fable-ultra\memory\lessons.md" }
-  ```
+- **Before starting:** read `memory/lessons.md` under the plugin install directory (resolve via `${CLAUDE_PLUGIN_ROOT}` when set) if it exists; apply any lesson relevant to this task type. Read it with the Read tool — no shell needed on any platform.
 - **After finishing (success or stop):** append ONE dated lesson line — what worked / what failed.
   ```powershell
-  Add-Content "J:\fable 5\fable-ultra\memory\lessons.md" "$(Get-Date -Format yyyy-MM-dd) | <task type> | worked: <x> | failed: <y>" -Encoding utf8
+  $root = if ($env:CLAUDE_PLUGIN_ROOT) { $env:CLAUDE_PLUGIN_ROOT } else { "." }  # PS 5.1-safe
+  Add-Content (Join-Path $root "memory\lessons.md") "$(Get-Date -Format yyyy-MM-dd) | <task type> | worked: <x> | failed: <y>" -Encoding utf8
   ```
+  ```sh
+  echo "$(date +%F) | <task type> | worked: <x> | failed: <y>" >> "${CLAUDE_PLUGIN_ROOT:-.}/memory/lessons.md"
+  ```
+  If the plugin directory is read-only on the current surface, append to `memory/lessons.md` in the project working directory instead and say so.
 
 ## CONTEXT HYGIENE (critical for smaller models)
 

@@ -19,9 +19,12 @@ measurably raise task quality. Build that; state the boundary in the deliverable
 1. **Task decomposition** — what the system does, split into agent roles (planner, workers,
    verifier, critic). One clear responsibility per agent.
 2. **Orchestration** — Claude Agent SDK; pipeline over barrier; structured-output schemas between
-   stages; adversarial verification on claims (N refuters, majority vote).
-3. **Model routing** — strongest model for judge/verify stages, cheaper tiers for mechanical
-   stages; graceful degradation when a model is unavailable.
+   stages; adversarial verification on claims (N refuters, majority vote). Subagents run in the
+   background by default (`run_in_background: false` for sync); `SendMessage` continues a spawned
+   agent with context intact — steer, don't relaunch.
+3. **Model routing** — strongest tier for judge/verify stages (Fable 5, `model: 'fable'`, above
+   Opus), Sonnet 5 for mid-tier work, Haiku 4.5 for mechanical stages; set per-agent `effort` to
+   match; graceful degradation when a model is unavailable.
 4. **Memory** — file-based or vector memory with explicit write/recall rules; convert relative
    dates to absolute; dedupe before writing.
 5. **Self-improvement loop** — evals first: a scored benchmark for the system's task. Improvement
@@ -29,7 +32,8 @@ measurably raise task quality. Build that; state the boundary in the deliverable
    claims.
 6. **Paper/research agents** — multi-modal search sweep -> deep-read -> adversarial fact-check ->
    cited synthesis; every claim traceable to a source.
-7. **Safety** — hard iteration ceilings, budget guards, kill switch, audit log, human gate on any
+7. **Safety** — hard iteration ceilings, budget guards (in Workflow runs the `budget` global is a
+   hard ceiling — `agent()` throws when exhausted), kill switch, audit log, human gate on any
    irreversible/outward-facing action.
 
 ## MCP connectors

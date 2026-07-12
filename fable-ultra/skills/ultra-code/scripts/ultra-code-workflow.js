@@ -1,6 +1,9 @@
 // Reference ultra-code Workflow script — PLAN -> BUILD -> VERIFY -> REVIEW -> LOOP.
 // Adapt stage prompts/schemas to the actual task before running. Plain JS (no TS).
 // Pass the goal via args: Workflow({script, args: {goal: "...", maxIterations: 10}}).
+// Quality dials: verify/review agents run at high effort; build agents inherit the session
+// model at default effort. Add isolation:'worktree' to BUILD agents ONLY when parallel items
+// mutate the same files. Never call Date.now()/Math.random() in here — they throw on resume.
 
 export const meta = {
   name: 'ultra-code',
@@ -78,7 +81,7 @@ const plan = await agent(
   `Decompose this goal into independent, concretely-scoped work items with a measurable ` +
   `done-condition. Goal: ${goal}. Safety: if the goal involves trading or money movement, every ` +
   `work item must specify paper/dry-run mode; live trading is out of scope.`,
-  { label: 'plan', schema: PLAN_SCHEMA }
+  { label: 'plan', schema: PLAN_SCHEMA, effort: 'high' }
 )
 log(`Plan: ${plan.workItems.length} items. Done when: ${plan.doneCondition}`)
 
@@ -109,7 +112,7 @@ while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
         : agent(
             `Adversarially verify work item "${item.task}" (files: ${JSON.stringify(built.filesTouched || [])}). ` +
             `Run the code/tests where possible. Try to REFUTE that it works. Default passes=false if uncertain.`,
-            { label: `verify:${item.id}`, phase: 'Verify', schema: VERDICT_SCHEMA }
+            { label: `verify:${item.id}`, phase: 'Verify', schema: VERDICT_SCHEMA, effort: 'high' }
           ).then((verdict) => ({ built, verdict, item }))
   )
 
@@ -128,11 +131,13 @@ while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
     `Completed: ${JSON.stringify(completed.map((c) => c.item.task))}. ` +
     `Pending fixes: ${JSON.stringify(failed.map((f) => f.task))}. Blocked: ${blocked.length}. ` +
     `Return ONLY genuinely-missing work items (empty array if the done-condition is met once fixes land).`,
-    { label: `review:${iter}`, phase: 'Review', schema: REVIEW_SCHEMA }
+    { label: `review:${iter}`, phase: 'Review', schema: REVIEW_SCHEMA, effort: 'high' }
   )
 
   queue = [...failed, ...review.newWorkItems]
   dryRounds = queue.length === 0 ? dryRounds + 1 : 0
+  log(`Iteration ${iter} done: ${completed.length} completed, ${queue.length} queued` +
+    (budget.total ? `, ${Math.round(budget.spent() / 1000)}k tokens spent` : ''))
 
   // Budget guard: hard-stop before overrunning a user token target.
   if (budget.total && budget.remaining() < 50000) {

@@ -53,8 +53,20 @@ failing dependency), STOP and report exactly what the user must provide — neve
 - Default to `pipeline()` — no barrier between stages; item A verifies while item B still builds.
   Use `parallel()` barriers ONLY when a stage genuinely needs all prior results (dedup, early-exit).
 - Use `schema` on every `agent()` call that returns data — structured output, no parse overhead.
+- Route BOTH quality dials per stage: `model` ('haiku'|'sonnet'|'opus'|'fable') AND `effort`
+  ('low'|'medium'|'high'|'xhigh'|'max'). Mechanical BUILD items run cheap at `effort:'low'`;
+  VERIFY/REVIEW agents get `effort:'high'` or `'max'` (ceiling model: `'fable'`). Omit `model`
+  to inherit the session model — usually correct.
+- When parallel BUILD items mutate the SAME files, give those agents `isolation:'worktree'`
+  (fresh git worktree each — expensive, so only when they would genuinely conflict).
+- Reuse registered subagent types via `agentType`; nest a saved pipeline inline with
+  `workflow(nameOrRef, args)` (one level of nesting only).
+- Determinism: `Date.now()`/`Math.random()`/argless `new Date()` THROW inside workflow scripts
+  (they would break resume) — pass timestamps in via `args`. Fan-out caps: 4096 items per
+  `pipeline()`/`parallel()` call, ~16 concurrent agents, 1000 agents per run.
 - Use `resumeFromRunId` when re-running after an edit: unchanged agent() calls return cached
-  results instantly (~100% cache hit for identical prefix).
+  results instantly (~100% cache hit for identical prefix). `journal.jsonl` in the transcript
+  dir records each agent's actual return value — read it before diagnosing a weird result.
 - Budget-aware loops: when the user sets a token target, guard with
   `while (budget.total && budget.remaining() > 50_000)`. Without a target, use the iteration
   ceiling instead — never an unguarded `while (true)`.
@@ -63,8 +75,9 @@ failing dependency), STOP and report exactly what the user must provide — neve
 
 ## Token-efficiency engine
 
-- **Cache-aware pacing**: the prompt cache TTL is ~5 minutes. When polling external state, poll
-  inside the window (≤270s) or commit to a long sleep (1200s+); never ~300s (worst of both).
+- **Pacing**: don't think in cache windows (the prompt-cache TTL varies by surface, 5 min–1 h) —
+  match wait time to what you're actually waiting for: one ~480s check beats eight 60s polls for
+  an ~8-minute CI run; use 1200s+ fallback heartbeats when something else is the wake signal.
 - **Scoped reads**: read only the lines you need from large files; never re-read a file you just
   edited (Edit/Write already errored if it failed).
 - **Delegate bulk search**: fan file-sweeps out to Explore/general-purpose subagents so the main

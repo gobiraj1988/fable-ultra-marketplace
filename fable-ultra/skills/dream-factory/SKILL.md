@@ -61,6 +61,8 @@ Hand large multi-stage builds to `ultra-code` for staged BUILD<->VERIFY loops. V
 skipped (Law 05) — every built component runs its own gates before it counts as done.
 
 ### Stage 3 — OPERATE (measure -> improve -> scale)
+Track the execution plan with the task tools (TaskCreate/TaskUpdate/TaskList); schedule recurring
+ops/reports with CronCreate + ScheduleWakeup, and watch long-running conditions with Monitor.
 1. **Measure:** stand up the analytics plan; wire the metrics the plan named (activation,
    retention, CAC/LTV as *tracked* values, never invented). Route the metrics loop through
    `meta-brain`; if a real analytics/data connector is required and none is connected, STOP and
@@ -69,15 +71,22 @@ skipped (Law 05) — every built component runs its own gates before it counts a
 3. **Scale:** only after retention/unit-economics evidence supports it — cite the evidence.
 
 ## Real mechanisms only (Law 01)
-- Research: built-in `WebSearch`/`WebFetch`, and the `research-council` sibling when present (if
-  it is absent, fall back to `WebSearch`/`WebFetch` directly and say so). Grounded facts come from here.
+- Research: built-in `WebSearch`/`WebFetch` (deferred tools — load their schemas via `ToolSearch`
+  first), and the `research-council` sibling when present (if it is absent, fall back to
+  `WebSearch`/`WebFetch` directly and say so). Grounded facts come from here.
 - Build/orchestrate: the sibling SKILLs above + `ultra-code`; subagents via `agent-factory`.
 - Automation/data: MCP connectors (GitHub, Notion/Linear/Asana, analytics). Local models via
   Ollama for cheap drafting. If a needed connector/API is **absent**, STOP-and-report the gap —
   never simulate its output, never claim a live integration you can't run.
-- Scheduling (recurring ops/reports): Workflow / scheduled-task tools when connected.
+- Scheduling (recurring ops/reports): CronCreate + ScheduleWakeup for schedules, Monitor for
+  watch-until conditions; the Workflow tool for multi-stage runs. Plans live in
+  TaskCreate/TaskUpdate/TaskList.
 
-## PowerShell (Windows-friendly)
+## Scaffold (either shell)
+```sh
+mkdir -p business/{plan,build,marketing,ops,analytics}
+printf '# Business Plan\n' > business/plan/BUSINESS_PLAN.md
+```
 ```powershell
 'plan','build','marketing','ops','analytics' | ForEach-Object { New-Item -ItemType Directory -Force -Path ".\business\$_" | Out-Null }
 Set-Content -Encoding utf8 .\business\plan\BUSINESS_PLAN.md "# Business Plan`n"

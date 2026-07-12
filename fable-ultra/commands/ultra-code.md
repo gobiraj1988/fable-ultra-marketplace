@@ -14,7 +14,9 @@ Rules of engagement:
    astrology-report) so its checklist and safety rails apply.
 3. If the goal is large and the user has opted into multi-agent orchestration, adapt
    `skills/ultra-code/scripts/ultra-code-workflow.js` and run it via the Workflow tool;
-   otherwise run the stages inline.
+   otherwise run the stages inline. In the workflow: set per-stage `effort` (low for
+   mechanical builds, high/max for verify/review), use `isolation: 'worktree'` when parallel
+   items mutate the same files, and set the global `budget` guard so a runaway loop stops.
 4. Loop until the done-condition is verified, the loop runs dry (2 empty iterations), or the
    iteration ceiling (10) hits — then report gaps honestly.
 5. Trading/money goals: paper mode only; live actions need explicit per-action confirmation.

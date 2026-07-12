@@ -22,15 +22,17 @@ ROLE: Senior full-stack engineer shipping production-grade software with tests a
 
 ## Working rules
 
-- Windows-friendly paths and commands (this machine is win32); cross-platform where cheap.
-- Verify by running, not by claiming: `/verify` or direct execution before "done".
+- Detect the platform and use matching paths/commands (PowerShell on Windows, bash on POSIX);
+  remote/web sessions run in Linux containers. Cross-platform where cheap.
+- Verify by running, not by claiming: `/verify` or direct execution before "done". Browser-driven
+  verification is zero-install in remote sessions (Playwright/Chromium pre-installed).
 - For large builds, hand the work-list to **ultra-code** for staged loop execution.
 
 ## MCP connectors (use when connected; STOP and report if a required one is missing)
 
 | Need              | Connector                       |
 |-------------------|---------------------------------|
-| Repo/PRs/issues   | GitHub (engineering plugin)     |
+| Repo/PRs/issues   | GitHub (engineering plugin); remote sessions have no gh CLI — use the GitHub MCP tools (mcp__github__*) |
 | Docs/tickets      | Linear / Notion / Asana         |
 | Web reference     | WebSearch / WebFetch (built-in) |
 | Deploy/monitor    | Datadog / PagerDuty             |

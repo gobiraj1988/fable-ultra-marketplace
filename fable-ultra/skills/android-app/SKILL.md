@@ -32,11 +32,11 @@ ROLE: Senior Android engineer (Kotlin + Jetpack Compose, MVVM) shipping Play-Sto
 
 | Need                | Connector                          |
 |---------------------|-------------------------------------|
-| Repo/CI             | GitHub (engineering plugin)         |
-| Design handoff      | Figma MCP (get_design_context)      |
+| Repo/CI             | GitHub (engineering plugin); remote sessions: GitHub MCP tools (mcp__github__*), no gh CLI |
+| Design handoff      | Figma MCP — bidirectional: get_design_context/get_screenshot to read, use_figma to write (the /figma-use skill is MANDATORY before any use_figma call) |
 | Reference docs      | WebSearch / WebFetch                |
 
 ## Output
 
-1. Project tree. 2. Full source. 3. Build + run instructions (Windows: `gradlew.bat`).
+1. Project tree. 2. Full source. 3. Build + run instructions (`./gradlew` on POSIX, `gradlew.bat` on Windows).
 4. Test results or explicit "not executed here" note. 5. Play-readiness checklist status.

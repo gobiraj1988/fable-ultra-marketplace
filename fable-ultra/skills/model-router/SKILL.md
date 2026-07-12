@@ -11,12 +11,21 @@ task's gates, and never pretend to call a model you cannot actually reach.
 
 ## HONEST REALITY (what you can and cannot route to)
 
-- **Directly routable now:** the Claude models the user has enabled in this session — **Fable 5,
-  Opus, Sonnet, Haiku** — switched with the `/model` command. You cannot silently switch mid-turn;
-  recommend the tier and tell the user the `/model` value to set, or set per-agent in a Workflow.
+- **Directly routable now:** the Claude models the user has enabled in this session — **Fable 5**
+  (`claude-fable-5`, Mythos-class, a full tier ABOVE Opus), **Opus 4.8** (`claude-opus-4-8`),
+  **Sonnet 5** (`claude-sonnet-5`), **Haiku 4.5** (`claude-haiku-4-5-20251001`) — switched with
+  the `/model` command. You cannot silently switch mid-turn; recommend the tier and tell the user
+  the `/model` value to set, or set per-agent in a Workflow (`model: 'haiku'|'sonnet'|'opus'|'fable'`).
+- **Second dial — reasoning EFFORT:** besides the model tier, each Workflow `agent()` call takes
+  `effort: 'low'|'medium'|'high'|'xhigh'|'max'`. Route BOTH dials: cheap mechanical stages get a
+  cheap model at `effort:'low'`; the hardest verify/judge stages get a premium model at high
+  effort. Raising effort on the SAME model is often cheaper than hopping a tier — try it first.
+- **Latency lever — fast mode:** `/fast` (Opus 4.8/4.7) is faster OUTPUT on Opus, NOT a downgrade
+  to a smaller model. Use it for latency-sensitive work; do not classify it as a cost tier.
 - **Local, if installed:** models served by **Ollama** (e.g. `llama3.1`, `qwen2.5`, `mistral`,
-  `phi`). Confirm before claiming availability:
-  ```powershell
+  `phi`). Not present on ephemeral remote containers. Confirm before claiming availability
+  (same command in PowerShell or a POSIX shell):
+  ```sh
   ollama list   # if this errors, Ollama is not installed — say so, do not fake a local route
   ```
 - **Other providers (GPT, Gemini, Qwen-cloud, DeepSeek, Mistral-cloud, Llama-cloud, MythoMax):**
@@ -26,19 +35,23 @@ task's gates, and never pretend to call a model you cannot actually reach.
 
 ## ROUTING TABLE (task shape -> recommended tier)
 
-| Task shape | Route to | Why |
-|---|---|---|
-| Mechanical / bulk (rename, reformat, extract, classify, boilerplate) | **Haiku** or a small **Ollama** local | Cheapest; quality is sufficient |
-| Standard build / reasoning (feature code, refactor, normal docs, analysis) | **Sonnet** | Best cost/quality balance for most work |
-| Hardest reasoning / final verify / judge / architecture / ambiguous spec | **Opus** or **Fable 5** | Reserve premium spend for where it moves the outcome |
-| Privacy-sensitive / offline / no-cloud-egress | **Ollama** local only | Data never leaves the machine |
-| High-stakes + disagreement risk | **multi-model council** (see below) | Reconcile independent answers |
+| Task shape | Route to | Effort | Why |
+|---|---|---|---|
+| Mechanical / bulk (rename, reformat, extract, classify, boilerplate) | **Haiku** or a small **Ollama** local | low | Cheapest; quality is sufficient |
+| Standard build / reasoning (feature code, refactor, normal docs, analysis) | **Sonnet** | medium | Best cost/quality balance for most work |
+| Hard reasoning / architecture / deep debugging | **Opus** | high | Premium reasoning below the ceiling |
+| Hardest judge / final verify / ambiguous spec / one-shot-must-be-right | **Fable 5** | high–max | The ceiling tier; spend it only where it moves the outcome |
+| Privacy-sensitive / offline / no-cloud-egress | **Ollama** local only | — | Data never leaves the machine |
+| High-stakes + disagreement risk | **multi-model council** (see below) | — | Reconcile independent answers |
 
 Pick the LOWEST row that plausibly clears the done-condition. Do not default to premium.
 
 ## ESCALATION CHAIN (the cost-saver — escalate only on a real signal)
 
-`small (Haiku/local) -> mid (Sonnet) -> premium (Opus/Fable 5) -> multi-model council`
+`small (Haiku/local) -> mid (Sonnet) -> premium (Opus) -> ceiling (Fable 5) -> multi-model council`
+
+Cheapest first hop: raise **effort** one notch on the CURRENT model before hopping a tier — a
+failed gate often clears at the same tier with more reasoning effort.
 
 1. Start at the routing-table tier for the task shape — NOT at premium.
 2. Run the task. Then run a **model-max verifier pass** (see `model-max`, THE MAX LOOP step 4 —
@@ -52,28 +65,33 @@ Pick the LOWEST row that plausibly clears the done-condition. Do not default to 
 
 ## REALIZING ROUTING INSIDE A WORKFLOW
 
-In a `Workflow`, set the model per agent via the `agent(prompt, opts)` call — the task prompt is a
-STRING first, then an opts object with `label`, `model`, and `schema` (same signature as
-`scripts/ultra-code-workflow.js`) — so cheap stages run cheap and only hard stages run premium:
+In a `Workflow`, set BOTH dials per agent via the `agent(prompt, opts)` call — the task prompt is
+a STRING first, then an opts object with `label`, `model`, `effort`, and `schema` (same signature
+as `scripts/ultra-code-workflow.js`; opts also take `agentType` and `isolation:'worktree'` for
+parallel file-mutating agents) — so cheap stages run cheap and only hard stages run premium:
 
 ```
-agent("<the extract/parse task prompt>", { label: "extract", model: "haiku"  })   // bulk parse
-agent("<the main build task prompt>",    { label: "build",   model: "sonnet" })   // main work
-agent("<the verify/judge task prompt>",  { label: "verify",  model: "opus"   })   // final judge / gate
+agent("<the extract/parse task prompt>", { label: "extract", model: "haiku",  effort: "low"  })  // bulk parse
+agent("<the main build task prompt>",    { label: "build",   model: "sonnet" })                  // main work (inherit effort)
+agent("<the verify/judge task prompt>",  { label: "verify",  model: "fable",  effort: "max"  })  // final judge / gate
 ```
 
 This turns the routing table into an executed plan: the pipeline itself spends premium tokens only
-on the verify/judge stage. Set the same tiers when spawning subagents by hand.
+on the verify/judge stage. Set the same tiers when spawning subagents by hand. Omit `model` when
+unsure — the agent inherits the session model, which is usually correct.
 
 ## LEADERBOARDS AS REAL FILES (measured only — never fabricated)
 
 Maintain a real leaderboard so routing improves from evidence, not vibes (Laws 4, 7).
 
-- File: `J:\fable 5\fable-ultra\memory\leaderboard.md`. Append one row per completed task with
-  **MEASURED** results only. Cost/latency are "approx" and only if actually observed; leave blank
-  if unknown — never invent a benchmark number (Law 1).
+- File: `memory/leaderboard.md` under the plugin install directory (resolve via
+  `${CLAUDE_PLUGIN_ROOT}` when set; fall back to the project working directory on surfaces where
+  the plugin dir is read-only). Append one row per completed task with **MEASURED** results only.
+  Cost/latency are "approx" and only if actually observed; leave blank if unknown — never invent
+  a benchmark number (Law 1). PowerShell shown; POSIX equivalent is a plain `[ -f ]`/`cat >>`.
   ```powershell
-  $lb = "J:\fable 5\fable-ultra\memory\leaderboard.md"
+  $root = if ($env:CLAUDE_PLUGIN_ROOT) { $env:CLAUDE_PLUGIN_ROOT } else { "." }  # PS 5.1-safe
+  $lb = Join-Path $root "memory\leaderboard.md"
   if (-not (Test-Path $lb)) {
     Set-Content $lb "| date | task type | model | outcome | approx cost | approx latency |`n|---|---|---|---|---|---|" -Encoding utf8
   }

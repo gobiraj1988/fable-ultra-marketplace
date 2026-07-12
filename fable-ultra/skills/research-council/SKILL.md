@@ -1,6 +1,6 @@
 ---
 name: research-council
-description: OMEGA Research Council (System B) — a seven-role multi-agent deliberation that produces a verified, cited recommendation on a hard, contested, or high-stakes question. Roles (Scientist, Critic, Builder, Tester, Auditor, Risk Officer, Strategist) run as Workflow subagents through independent research -> cross-examination -> debate -> consensus -> verification -> recommendation. Use when the user says "research council", "convene the council", "deliberate", "steelman and stress-test this", "give me a decision with dissent preserved", "should we X — argue both sides with sources", or wants a defensible go/no-go with a risk analysis and evidence package. DIFFERS from the top-level `deep-research` skill (a single fan-out/verify/synthesize web-research harness) - this skill CALLS deep-research (or WebSearch/WebFetch/Exa) for grounding and wraps it in adversarial multi-role decision-making. For a plain cited report with no decision or dissent, use `deep-research` directly instead.
+description: OMEGA Research Council (System B) — an eight-role multi-agent deliberation that produces a verified, cited recommendation on a hard, contested, or high-stakes question. Roles (Scientist, Critic, Builder, Tester, Auditor, Risk Officer, Economist, Strategist) run as Workflow subagents through independent research -> cross-examination -> debate -> consensus -> verification -> recommendation. Use when the user says "research council", "convene the council", "deliberate", "steelman and stress-test this", "give me a decision with dissent preserved", "should we X — argue both sides with sources", or wants a defensible go/no-go with a risk analysis and evidence package. DIFFERS from the top-level `deep-research` skill (a single fan-out/verify/synthesize web-research harness) - this skill CALLS deep-research (or WebSearch/WebFetch/Exa) for grounding and wraps it in adversarial multi-role decision-making. For a plain cited report with no decision or dissent, use `deep-research` directly instead.
 ---
 
 # OMEGA Research Council — System B
@@ -14,7 +14,7 @@ verification evidence, **03** never hide uncertainty, **04** evidence > confiden
 open — it does **not** make the answer omniscient or guaranteed correct. Surface residual
 uncertainty; never present consensus as proof (Law 03).
 
-## The seven roles (each a subagent with one job)
+## The eight roles (each a subagent with one job)
 
 | Role | Mandate | Primary output |
 |---|---|---|
@@ -35,10 +35,11 @@ outputs are structured, and `resumeFromRunId` on re-runs to reuse cached role wo
 
 ```js
 // Sketch — adapt prompts/schemas to the real question. Not run verbatim.
-// Canonical API: agent(promptString, {label, schema, model, phase}) · parallel(thunks) · pipeline(items, ...stages)
+// Canonical API: agent(promptString, {label, schema, model, effort, phase}) · parallel(thunks) · pipeline(items, ...stages)
+// effort:'max' on the Critic/Auditor seats and the verify pass; default effort elsewhere (Law 08)
 const question = "<the decision to resolve>";
 const ROLES = ["scientist","critic","builder","tester","auditor","economist","riskofficer","strategist"];
-const esc = (r) => (r === "critic" || r === "auditor") ? "opus" : undefined; // escalate adversarial seats (model-router)
+const esc = (r) => (r === "critic" || r === "auditor") ? "fable" : undefined; // escalate adversarial seats to Fable 5 (model-router)
 
 // 1) INDEPENDENT RESEARCH — parallel(THUNKS) barrier: all views formed before anyone reads another
 const views = await parallel(ROLES.map(r => () =>
@@ -51,7 +52,7 @@ const debate = await agent(debatePrompt(views, xexam), { label: "debate", schema
 // 4) CONSENSUS ATTEMPT — where do all eight agree / where is it irreducibly split
 const consensus = await agent(consensusPrompt(debate), { label: "consensus", schema: ConsensusSchema });
 // 5) VERIFICATION PASS — re-check every load-bearing claim against its cited source (Law 05)
-const verified = await agent(verifyPrompt(consensus), { label: "verify", model: "opus", schema: VerifySchema });
+const verified = await agent(verifyPrompt(consensus), { label: "verify", model: "fable", effort: "max", schema: VerifySchema });
 // 6) RECOMMENDATION — Strategist writes the decision using ONLY verified claims
 const decision = await agent(decisionPrompt(verified), { label: "decision", schema: DecisionSchema });
 ```
@@ -75,7 +76,8 @@ same order — the discipline, not the tool, is what matters.
 ## Model tier escalation (model-router)
 
 Ask the **model-router** skill to escalate the adversarial seats — **Critic** and **Auditor** —
-to the strongest available tier (their job is to break claims; capability matters most there).
+to the strongest available tier: `model:'fable'` (Fable 5, the Mythos-class tier above Opus). Their
+job is to break claims; capability matters most there, and the verify pass gets the same tier.
 Run the mechanical seats at standard tier to respect Law 08 (optimize cost). If model-router is
 absent, keep all seats on the selected model and **say so** — never claim escalation you didn't do
 (Law 03). Local **Ollama** models may serve standard seats when configured; never a verify seat.
@@ -93,15 +95,16 @@ absent, keep all seats on the selected model and **say so** — never claim esca
 
 ## Close-out (Laws 07, 09)
 
-- Append one dated lesson to `J:\fable 5\fable-ultra\memory\lessons.md`.
+- Append one dated lesson to `memory/lessons.md` under the plugin root.
 - Append durable, source-attributed findings to the knowledge-lake — via the **knowledge-lake**
-  skill if installed, else to `J:\fable 5\fable-ultra\memory\knowledge-lake.md`:
+  skill if installed, else to `memory/knowledge-lake.md` under the plugin root:
 
 ```powershell
+$root = if ($env:CLAUDE_PLUGIN_ROOT) { $env:CLAUDE_PLUGIN_ROOT } else { "." }  # PS 5.1-safe
 $stamp = Get-Date -Format yyyy-MM-dd
-Add-Content "J:\fable 5\fable-ultra\memory\lessons.md" `
+Add-Content (Join-Path $root "memory\lessons.md") `
   "$stamp [research-council] <question> -> <verdict>; unresolved: <what stayed split>" -Encoding utf8
-Add-Content "J:\fable 5\fable-ultra\memory\knowledge-lake.md" `
+Add-Content (Join-Path $root "memory\knowledge-lake.md") `
   "$stamp | FINDING: <claim> | SOURCE: <url> | CONFIDENCE: <hi/med/lo> | via research-council" -Encoding utf8
 ```
 

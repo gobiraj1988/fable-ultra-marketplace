@@ -39,8 +39,9 @@ Before doing any work yourself, check installed skills and prefer invoking a spe
 ## 3. Excel Standards
 
 - Live formulas (`=SUM`, `=ROUND`, cell references) — never hardcode computed values.
-- Recalculate the workbook and verify totals before delivery. PowerShell check via openpyxl:
-  ```powershell
+- Recalculate the workbook and verify totals before delivery. Check via openpyxl (runs in any
+  shell — PowerShell or bash):
+  ```sh
   python -c "import openpyxl; wb=openpyxl.load_workbook('out.xlsx', data_only=True); print(wb['Abstract']['F42'].value)"
   ```
   (Requires the file opened/recalculated once, or use a formula-evaluation pass per the xlsx skill.)

@@ -51,13 +51,18 @@ fable-ultra/
 
 From a local marketplace or directly:
 
-```powershell
-# Option A: add this folder as a local plugin marketplace, then install
-claude plugin marketplace add "J:\fable 5"
+```sh
+# Option A: add the marketplace folder as a local plugin marketplace, then install
+# (path examples — Windows: "J:\fable 5", POSIX: ~/fable-ultra-marketplace)
+claude plugin marketplace add "<path-to-marketplace-folder>"
 claude plugin install fable-ultra
 
 # Option B (dev): load it for one session
-claude --plugin-dir "J:\fable 5\fable-ultra"
+claude --plugin-dir "<path-to-marketplace-folder>/fable-ultra"
+
+# Option C: install from the GitHub marketplace repo
+claude plugin marketplace add gobiraj1988/fable-ultra-marketplace
+claude plugin install fable-ultra@fable-ultra-marketplace
 ```
 
 Then `/ultra-code <your goal>` or just describe a task — skills trigger by description.
@@ -76,10 +81,12 @@ For work spanning sessions, pair it with the `/loop` skill (self-paced wakeups) 
 
 ## How the token savings work
 
-Not magic — mechanics: prompt-cache-aware pacing (stay inside the ~5-min cache window or commit
-to long sleeps), scoped file reads, bulk search delegated to subagents so the main context stays
-lean, structured-output schemas between workflow stages, Workflow `resumeFromRunId` so re-runs
-hit cache on unchanged steps, and budget-guarded loops with hard ceilings.
+Not magic — mechanics: wait-for-what-you're-waiting-for pacing (one long check beats many short
+polls; cache TTL varies by surface so don't design around it), scoped file reads, bulk search
+delegated to subagents so the main context stays lean, structured-output schemas between workflow
+stages, per-stage model + reasoning-effort routing (cheap stages low, verify stages high),
+Workflow `resumeFromRunId` so re-runs hit cache on unchanged steps, and budget-guarded loops with
+hard ceilings (the in-run `budget` global).
 
 ## Required connectors
 

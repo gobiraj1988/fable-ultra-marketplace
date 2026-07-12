@@ -10,22 +10,30 @@ Never claim consciousness, general intelligence, or capabilities beyond editing 
 
 ## The Upgrade Loop (mandatory order — do not skip or reorder steps)
 
-1. **Gather evidence.** Read `J:\fable 5\fable-ultra\memory\lessons.md`, the most recent `ultra-code-run.md` files in recent project working directories (ultra-code/model-max write them where the project runs, NOT under the plugin directory), and any user feedback in this conversation. List concrete failure observations (missed trigger, vague instruction, repeated mistake). No evidence = no upgrade; say so and stop.
+1. **Gather evidence.** Read `memory/lessons.md` under the plugin install directory (resolve via
+   `${CLAUDE_PLUGIN_ROOT}` when set), the most recent `ultra-code-run.md` files in recent project working directories (ultra-code/model-max write them where the project runs, NOT under the plugin directory), and any user feedback in this conversation. List concrete failure observations (missed trigger, vague instruction, repeated mistake). No evidence = no upgrade; say so and stop.
 2. **Pick exactly ONE weakest skill** this cycle, chosen by the evidence — the skill with the most/severest observations. Never guess, never pick two.
-3. **Backup first.** Copy the target before touching it:
+3. **Backup first.** Copy the target before touching it — paths are relative to the plugin root
+   (`${CLAUDE_PLUGIN_ROOT}` when set):
+   ```sh
+   cp "skills/<name>/SKILL.md" "skills/<name>/<name>.bak.md"                 # POSIX
+   ```
    ```powershell
-   Copy-Item "J:\fable 5\fable-ultra\skills\<name>\SKILL.md" "J:\fable 5\fable-ultra\skills\<name>\<name>.bak.md" -Force
+   Copy-Item "skills\<name>\SKILL.md" "skills\<name>\<name>.bak.md" -Force   # Windows
    ```
 4. **Propose ONE focused edit** — a sharper trigger phrase, a better checklist item, a new countermeasure for an observed failure. Small diff (a few lines), never a rewrite. State the edit and the evidence line that justifies it before applying.
 5. **Test.**
    - Validate the YAML frontmatter still parses (`---` fences intact, `name:` and `description:` present, no tabs).
    - Run a before/after eval: give the OLD and NEW skill text to 3 test scenarios (realistic user asks drawn from the evidence) and judge which version produces better instructions for each. Use the skill-creator plugin's eval machinery if installed; otherwise run a simple scripted 3-scenario comparison and record a winner per scenario.
 6. **Keep only if the new version wins** (2 of 3 or better). Otherwise restore the backup and append the reason it lost to `lessons.md`:
-   ```powershell
-   Copy-Item "J:\fable 5\fable-ultra\skills\<name>\<name>.bak.md" "J:\fable 5\fable-ultra\skills\<name>\SKILL.md" -Force
+   ```sh
+   cp "skills/<name>/<name>.bak.md" "skills/<name>/SKILL.md"                 # POSIX
    ```
-7. **Version bump.** Edit `J:\fable 5\fable-ultra\.claude-plugin\plugin.json`: patch bump (x.y.Z+1) for tweaks, minor bump (x.Y+1.0) for a new capability. Append a dated entry to `J:\fable 5\fable-ultra\CHANGELOG.md` describing the edit and the eval result.
-8. **Tell the user to reload:** `claude plugin update fable-ultra@fable-ultra-marketplace` (the marketplace-qualified name is required — the bare name fails with "not found").
+   ```powershell
+   Copy-Item "skills\<name>\<name>.bak.md" "skills\<name>\SKILL.md" -Force   # Windows
+   ```
+7. **Version bump.** Edit `.claude-plugin/plugin.json` (plugin root): patch bump (x.y.Z+1) for tweaks, minor bump (x.Y+1.0) for a new capability. Append a dated entry to the plugin's `CHANGELOG.md` describing the edit and the eval result.
+8. **Tell the user to reload:** on the CLI, `claude plugin update fable-ultra@fable-ultra-marketplace` (the marketplace-qualified name is required — the bare name fails with "not found"). Desktop/web/IDE surfaces don't run that command — they re-sync the plugin from the marketplace instead.
 9. **Report a short diff summary** to the user — which skill, what changed, eval score, new version. Never upgrade silently.
 
 | Step | Gate | On failure |

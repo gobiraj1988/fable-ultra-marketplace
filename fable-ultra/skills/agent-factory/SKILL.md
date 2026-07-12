@@ -42,7 +42,8 @@ Pick ONE form and produce a concrete artifact:
   ```
   Create it (PowerShell): `New-Item -ItemType Directory -Force .claude\agents;` then Write the file.
 - **Inline Workflow agent spec** — dispatched programmatically: a record of
-  `{ prompt, output schema, model, tools[] }` passed to the Workflow tool's `agentType`.
+  `{ prompt, output schema, model, effort, isolation, tools[] }` passed to the Workflow tool's
+  `agentType`. Give parallel write/refactor agents `isolation: 'worktree'` so runs don't collide.
 
 Every agent MUST declare an output contract (schema or rubric-checkable shape). No contract, no agent.
 
@@ -54,9 +55,12 @@ on a read-only research agent is a security risk — flag and narrow it. Default
 |---|---|
 | Read/analyze code | Read, Grep, Glob |
 | Web research | WebSearch, WebFetch (or Exa MCP if configured) |
-| Write/refactor files | Read, Edit, Write |
+| Write/refactor files | Read, Edit, Write (+ `isolation: 'worktree'` when run in parallel) |
 | Run/verify | Bash (scoped commands), Read |
 | Irreversible (send/publish/trade/delete) | the connector + **mandatory human gate** (step 8) |
+
+Also right-size `effort` per role: `'low'` for mechanical roles, `'high'`/`'max'` for verify/critic
+roles — capability where it gates, thrift everywhere else.
 
 ### 4. TEST + VERIFY on a sample (Law 05 — gate)
 Run the agent on one representative sample. Score its output against a written rubric (meets the
@@ -65,7 +69,10 @@ evidence (Law 02). **A failed rubric BLOCKS deployment** — fix prompt/tools an
 
 ### 5. DEPLOY · MONITOR · RETIRE
 - **Deploy** — reference the agent by `.claude/agents` name via the Agent tool `subagent_type`,
-  or by `agentType` in a Workflow step. Register it in the factory index (below).
+  or by `agentType` in a Workflow step. Agent-tool dispatch runs in the BACKGROUND by default
+  (pass `run_in_background: false` for a synchronous run); continue or steer an already-spawned
+  agent with `SendMessage` (context intact) instead of relaunching. Register it in the factory
+  index (below).
 - **Monitor** — meta-brain (System O/S) reviews recorded outputs across runs: rubric pass rate,
   cost/run, retries, fabrication flags. This is between-run review of logs, not a live watcher.
 - **Retire** — when an agent underperforms (pass rate falls, cost balloons, superseded),
@@ -89,6 +96,9 @@ Each agent's system prompt instructs it to load the matching fable-ultra skill o
 | marketing | `dream-factory` | WebSearch, Write |
 | support | `knowledge-lake` | Read, WebSearch |
 | business | `dream-factory` | Read, WebSearch, Write |
+
+Model per type: verify/critic-shaped agents (testing, refuters, judges) get `model: 'fable'`
+(Fable 5, the strongest tier) with `effort: 'high'`; mechanical types run cheaper tiers at low effort.
 
 ### 7. External capability check (no faking — Law 01)
 If a role needs a connector that may be absent (Exa MCP, GitHub, Zapier, a broker API, Ollama for

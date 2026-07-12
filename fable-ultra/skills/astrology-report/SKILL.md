@@ -38,7 +38,7 @@ as certainties.
 | Need                 | Connector                        |
 |----------------------|----------------------------------|
 | Geocoding/tz lookup  | WebFetch to open APIs            |
-| Report delivery      | Zapier MCP (email/Drive/Sheets)  |
+| Report delivery      | Zapier MCP (email/Drive/Sheets) — skills-first: discover_zapier_actions -> enable -> execute_zapier_write_action |
 | Doc export           | docx / pdf / xlsx skills         |
 
 ## Output

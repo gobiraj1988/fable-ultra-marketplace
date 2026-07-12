@@ -24,18 +24,25 @@ capability => STOP-and-report; never fake connector output or claim a pass witho
 
 ## 2. Storage layout — a valid Workflow script
 
-Create the dir on first write: `New-Item -ItemType Directory -Force -Path 'J:\fable 5\fable-ultra\workflows'`.
-Save each template as `J:\fable 5\fable-ultra\workflows\<name>.js`. Every template MUST:
+Create the dir on first write: `mkdir -p "${CLAUDE_PLUGIN_ROOT:-.}/workflows"` (POSIX) or
+`New-Item -ItemType Directory -Force -Path (Join-Path $root 'workflows')` (PowerShell, with
+`$root` = `$env:CLAUDE_PLUGIN_ROOT` or `.`).
+Save each template as `workflows/<name>.js` under the plugin root. Every template MUST:
 
 1. Start with a `// version: vN — <date>` comment (bump on every change, section 4).
 2. `export const meta = { name, description, phases }` — same shape as
    `skills/ultra-code/scripts/ultra-code-workflow.js`.
 3. Read ALL inputs from the `args` global — never hardcode task text:
    `const goal = (args && args.goal) || 'No goal — report and stop.'`.
-4. Build with `agent(promptString, { label, schema, phase })`, `pipeline(items, ...stages)` for
-   independent items (no barrier), `parallel(thunks)` only where a stage needs all prior results.
+4. Build with `agent(promptString, { label, schema, phase, model, effort, agentType, isolation })` —
+   route hard verify/judge stages to `model: 'fable'` (Fable 5, strongest tier) with `effort:
+   'high'|'max'`, cheap stages to low effort, parallel write stages to `isolation: 'worktree'`,
+   registered subagents via `agentType`; `pipeline(items, ...stages)` for independent items
+   (no barrier), `parallel(thunks)` only where a stage needs all prior results.
 5. Put a `schema` on every data-returning `agent()` call; call `phase('...')` / `log('...')`.
 6. Include an iteration ceiling (section 8) and a `return` summary object.
+7. DETERMINISM: never call `Date.now()`, `Math.random()`, or arg-less `new Date()` in a workflow
+   script — they THROW inside Workflow runs and would break resume; pass timestamps/seeds via `args`.
 
 Maintain `workflows/INDEX.md` — a table of `name | purpose | args (in) | outputs`. Update it whenever
 a template is added or its interface changes (section 4).
@@ -47,7 +54,8 @@ top-level `return`/`await` and the `args`/`agent` globals, a bare `node --check 
 the body in an async function first, exactly as ultra-code's termination test did. Windows-safe:
 
 ```powershell
-$src = 'J:\fable 5\fable-ultra\workflows\research-pipeline.js'
+$root = if ($env:CLAUDE_PLUGIN_ROOT) { $env:CLAUDE_PLUGIN_ROOT } else { "." }  # PS 5.1-safe
+$src = Join-Path $root 'workflows\research-pipeline.js'
 # Strip the multi-line `export const meta = { ... }` block. Must be singleline-aware
 # ([\s\S] crosses newlines) — a `(?m)`-only `.*?` pattern will NOT match across the block
 # and would leave the top-level `export` in the wrapper.
@@ -56,7 +64,7 @@ $body = [regex]::Replace((Get-Content $src -Raw), 'export\s+const\s+meta[\s\S]*?
 # A `.js` (CommonJS) temp file lets a stray top-level `export` flip Node into error-recovery
 # and MASK real syntax errors — broken templates would falsely pass.
 $tmp  = Join-Path $env:TEMP 'wf-check.mjs'
-"async function __wf(args, agent, pipeline, parallel, phase, log, budget){`n$body`n}" |
+"async function __wf(args, agent, pipeline, parallel, workflow, phase, log, budget){`n$body`n}" |
   Out-File -Encoding utf8 $tmp
 node --check $tmp; if ($?) { 'SYNTAX OK' } else { 'SYNTAX FAIL — fix and re-check' }
 ```
@@ -66,7 +74,7 @@ define `agent`/`pipeline`/`parallel` as stubs returning canned schema-shaped obj
 `args`, and confirm the wrapped function RETURNS (does not hang). Node example:
 
 ```powershell
-node -e "const a=async()=>({passes:true,defects:[],workItems:[],newWorkItems:[]});global.agent=a;global.pipeline=async(i,...s)=>[];global.parallel=async(t)=>Promise.all(t.map(f=>f()));global.phase=()=>{};global.log=()=>{};global.budget={total:0,remaining:()=>1e9};require('./wrap.js')"
+node -e "const a=async()=>({passes:true,defects:[],workItems:[],newWorkItems:[]});global.agent=a;global.pipeline=async(i,...s)=>[];global.parallel=async(t)=>Promise.all(t.map(f=>f()));global.workflow=async()=>({});global.phase=()=>{};global.log=()=>{};global.budget={total:0,remaining:()=>1e9};require('./wrap.js')"
 ```
 
 If Node is not installed, STOP-and-report ("install Node to syntax-test templates") — do not register
@@ -81,14 +89,16 @@ an unchecked script.
 
 ## 5. REUSE — run or resume a template
 
-- Run: `Workflow({ scriptPath: 'J:\\fable 5\\fable-ultra\\workflows\\research-pipeline.js' })`, passing
+- Run: `Workflow({ scriptPath: '<plugin-root>/workflows/research-pipeline.js' })`, passing
   inputs the script reads from `args` (e.g. `{ args: { goal, maxIterations: 8 } }`).
 - Resume after an edit: `Workflow({ scriptPath, resumeFromRunId })` — identical `agent()` prefixes
   return cached results instantly; only changed/new calls re-run.
 - Adapt, don't run blind: before each run, re-tailor the stage prompts to the real task (section 6).
-- Background/recurring runs use the `schedule` skill plus the Task and Cron tools. There is NO standalone
-  "Workflow resumeFromRunId" recovery tool — recover a crashed run by relaunching from its
-  run-state file (write intermediate state to a `<name>-run.md` so progress survives a reset).
+- Background/recurring runs use the `schedule` skill plus the Task and Cron tools. Resume-by-run-id
+  IS the primary recovery path for a crashed run: `Workflow({ scriptPath, resumeFromRunId })` replays
+  cached results for the unchanged `agent()` prefix from `journal.jsonl` (in the run's transcript
+  dir, one line per agent return value). Keep a `<name>-run.md` run-state file as a SUPPLEMENT —
+  human-readable progress plus the run-id, so it survives a reset.
 
 ## 6. Honesty (X-LAWS 01, 03)
 
@@ -111,5 +121,5 @@ done-condition, it is not ready — do not register it.
 - If a stage needs an MCP connector or credential absent this session, the template's stage returns
   `status: "blocked"` with the exact setup step — never simulated output.
 - After a template ships (or is blocked), append one dated line to
-  `J:\fable 5\fable-ultra\memory\lessons.md`, then register the template (name, purpose, path,
+  `memory/lessons.md` under the plugin root, then register the template (name, purpose, path,
   verification result) in `knowledge-lake` (source-attributed). No log = the cycle is not complete.

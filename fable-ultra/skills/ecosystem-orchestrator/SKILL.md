@@ -42,9 +42,12 @@ Absent capability at any stage => STOP-and-report in `ecosystem-run.md`; never f
 2. Supervise the whole run with `meta-brain` (progress, stalls, gate outcomes, budget burn).
 3. Apply `model-max` discipline and `model-router` routing: cheapest model/path that still passes
    every gate (X-LAW 08). Use `mcp-connector` for external tools; missing/unauthed connector => STOP.
-4. Chain stages with the Workflow tool: `agent(prompt,{label,schema,model,phase})`,
-   `pipeline(items, ...stages)`, `parallel(thunks)`, and `Workflow({scriptPath})` to launch a run.
-   Persist the run's state to disk so it can be recovered (§4).
+4. Chain stages with the Workflow tool: `agent(prompt,{label,schema,model,effort,phase})`,
+   `pipeline(items, ...stages)`, `parallel(thunks)`, and `Workflow({scriptPath})` to launch a run —
+   or call `workflow(nameOrRef, args)` inline to chain a saved pipeline (one level of nesting only).
+   Route effort per stage: cheap stages `effort:'low'`, verify/gate stages `'high'`/`'max'`, and the
+   hardest verification to `model:'fable'` (Fable 5, the strongest tier). Persist the run's state to
+   disk so it can be recovered (§4).
 
 ## 3. STATE + AUDIT — `ecosystem-run.md` (X-LAW 08)
 This file IS the audit trail. Update it after every stage and every gate decision. Keep these keys:
@@ -65,9 +68,11 @@ lesson to `memory/lessons.md` and to `knowledge-lake` (X-LAW 07).
 ## 4. RUN-STATE + RECOVERY (Windows-friendly)
 - Store the launch run-id and per-stage status in `ecosystem-run.md` and a machine-readable
   `run-state.json` beside it.
-- Long/background stages use the Task tools + the `schedule` skill (or the CronCreate/CronList/CronDelete tools). There is NO standalone
-  "Workflow resumeFromRunId" background-recovery tool — to recover, RELAUNCH from the run-state file:
-  read `run-state.json`, then call `Workflow({scriptPath})` (optionally `resumeFromRunId` from that file).
+- Long/background stages use the Task tools + the `schedule` skill (or the CronCreate/CronList/CronDelete tools). To recover a
+  crashed run, call `Workflow({scriptPath, resumeFromRunId})` with the run-id from `run-state.json` —
+  the run's `journal.jsonl` replays cached results for the unchanged `agent()` prefix, so only
+  changed/new stages re-run. The run-state file is the SUPPLEMENT that carries the run-id and
+  per-stage status across resets.
 - PowerShell (no bash brace-expansion): enumerate stages as
   `'research','knowledge','agents' | ForEach-Object { Write-Output $_ }`.
 

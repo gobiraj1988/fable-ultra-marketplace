@@ -9,7 +9,11 @@ Governed by `omega-constitution`. Law 01 (never fabricate) and Law 07 (store les
 spine of this skill; every entry is sourced or explicitly labeled `ASSUMPTION`.
 
 ## 1. Storage layout
-Files live under `J:\fable 5\fable-ultra\knowledge\<domain>\<object>.md`.
+Files live under `knowledge/<domain>/<object>.md` under the plugin install directory (resolve via
+`${CLAUDE_PLUGIN_ROOT}` when set).
+Durability: on ephemeral remote/web containers local disk does NOT survive the session — persist
+the lake by committing it via the GitHub MCP tools (mcp__github__*) before the session ends
+(respecting Section 7 privacy).
 
 | Domains | Object types (one file per type) |
 |---|---|
@@ -17,7 +21,7 @@ Files live under `J:\fable 5\fable-ultra\knowledge\<domain>\<object>.md`.
 | qs, fidic, contracts, construction | patterns, benchmarks, lessons |
 | trading, programming, ai, ocr, rag, agents, business | failures, playbooks |
 
-Create the folder on first write (PowerShell): `New-Item -ItemType Directory -Force -Path 'J:\fable 5\fable-ultra\knowledge\qs'`.
+Create the folder on first write: `mkdir -p knowledge/qs` (POSIX) / `New-Item -ItemType Directory -Force -Path 'knowledge\qs'` (PowerShell).
 
 ## 2. Mandatory source attribution (Law 01)
 Every entry records a **source** and a **confidence**. No exceptions.
@@ -47,9 +51,10 @@ Added: YYYY-MM-DD   Domain: <domain>   Verify: VERIFIED|UNVERIFIED|REFUTED   Rel
 ```
 
 ## 4. Recall — how a task queries the lake
-1. **Targeted (default):** `Grep` by domain+object, then `Read` the hit. PowerShell example —
-   `Select-String -Path 'J:\fable 5\fable-ultra\knowledge\qs\rules.md' -Pattern 'retention|DLP'`
-   (prefer the Grep tool in-session; this is the shell equivalent).
+1. **Targeted (default):** `Grep` by domain+object, then `Read` the hit. Shell equivalents —
+   `grep -E 'retention|DLP' knowledge/qs/rules.md` (POSIX) /
+   `Select-String -Path 'knowledge\qs\rules.md' -Pattern 'retention|DLP'` (PowerShell); prefer
+   the Grep tool in-session.
 2. **At scale:** for large lakes, hand the folder to `ai-builder` to build/query a vector index
    (RAG pipeline). Embeddings can run locally via **Ollama** (pick a current local embedding model
    from `ollama.com/library` at build time — model names go stale, don't copy one from memory) so no
@@ -72,7 +77,7 @@ only from `memory/lessons.md` and `ultra-code-run.md`, so treat that data flow a
 guaranteed.) Never fabricate a benchmark — only record numbers you actually measured (Law 01/04).
 
 ## 6. Worked example (a QS rule, sourced)
-Written to `knowledge\qs\rules.md`:
+Written to `knowledge/qs/rules.md`:
 ```
 ### qs-retention-01 — Retention is released in two moieties
 Claim: Under FIDIC Red Book 1999 sub-clause 14.9, half the retention is certified at Taking-Over
@@ -98,5 +103,5 @@ discipline as Section 2). Otherwise:
 2. Flag any entry missing a `Source:` or `Confidence:` line as **again-unsourced** and quarantine it
    as `ASSUMPTION` until re-sourced.
 3. Flag duplicates the write-time dedupe missed; merge, keeping the higher-confidence source.
-4. Write the audit result (counts, flagged ids) to `knowledge\ai\lessons.md` and report it — do NOT
+4. Write the audit result (counts, flagged ids) to `knowledge/ai/lessons.md` and report it — do NOT
    silently delete entries (deletion is irreversible; needs human approval, Law 10).

@@ -1,5 +1,48 @@
 # Changelog — fable-ultra
 
+## 4.2.0 — 2026-07-12 — maximum-level capability upgrade (skills + connectors), zero new skills
+
+Three parallel adversarial audits over all 26 skills + connectors against the current (July 2026)
+harness, then edits in place per the OMEGA PRIME evolution rule — skill count stays 26.
+
+- **Reasoning-effort axis everywhere**: `agent()` `effort: 'low'|'medium'|'high'|'xhigh'|'max'`
+  is now a first-class routing dial beside model tier. model-router routes BOTH dials (raise
+  effort before hopping a tier); model-max retries at higher effort before declaring "needs a
+  stronger model"; ultra-code's script runs plan/verify/review at `effort:'high'`; workflow-factory,
+  ecosystem-orchestrator, agent-factory, agent-system, research-council, prompt-engine all teach it.
+- **Fable 5 as a distinct ceiling tier** (`claude-fable-5`, Mythos-class, above Opus): split from
+  Opus in the routing table and escalation chain (`Haiku -> Sonnet -> Opus -> Fable 5 -> council`);
+  research-council's adversarial seats and verify pass escalate to `model:'fable'` + `effort:'max'`;
+  current API ids documented (claude-opus-4-8, claude-sonnet-5, claude-haiku-4-5-20251001); `/fast`
+  documented as a latency lever on Opus, NOT a smaller model.
+- **Workflow API completions**: `isolation:'worktree'` for parallel same-file builds, `agentType`
+  reuse, `workflow()` one-level nesting, `budget.spent()` live accounting (replaces the static
+  "100k-900k" estimate in ai-os; governance-core wires `budget` to its ledger as live enforcement),
+  determinism rule (Date.now/Math.random throw in scripts), fan-out caps (4096/16/1000),
+  journal.jsonl diagnostics. Fixed the stale "there is NO resumeFromRunId tool" claims in
+  workflow-factory/ecosystem-orchestrator/meta-brain — resume-by-run-id is real and is now the
+  primary recovery path. workflow-factory's test harness gains the missing `workflow` global
+  (templates using nesting no longer false-fail).
+- **Connector layer refresh** (.mcp.json + mcp-connector): current discovery tools
+  (ListConnectors/SuggestConnectors/SearchMcpRegistry + ToolSearch deferred loading), Zapier
+  skills-first flow, bidirectional Figma (+ mandatory /figma-use before use_figma), remote-session
+  notes (GitHub via mcp__github__* — no gh CLI; Playwright/Chromium pre-installed), portable sample
+  server, and a complete per-skill connector map covering all 26 skills (was 6).
+- **Cross-platform portability**: every hardcoded `J:\fable 5\...` path replaced with
+  plugin-root-relative paths (`${CLAUDE_PLUGIN_ROOT}`, PS 5.1-safe PowerShell + POSIX equivalents)
+  across model-router, model-max, governance-core, workflow-factory, meta-brain, research-council,
+  self-upgrade, skill-factory, knowledge-lake, dream-factory, README install steps (+ GitHub
+  marketplace install option). Domain skills: dual-platform installs/commands (gradlew, tesseract,
+  timers), knowledge-lake durability note for ephemeral containers.
+- **Consistency fixes**: research-council seven->EIGHT roles (Economist) everywhere; meta-brain's
+  phantom `mcp__scheduled-tasks__*` replaced with real CronCreate/ScheduleWakeup/Monitor tools
+  (+ TaskOutput/TaskUpdate, SendMessage steering); stale "~5-min cache window" pacing replaced with
+  wait-for-what-you're-waiting-for guidance (ultra-code, README); skill-factory validator now
+  enforces the 1024/500 description caps; prompt-engine generalized to the Claude 5 family.
+
+Verified: all 26 frontmatters strict-YAML-parse with descriptions <=1024, plugin description <=500,
+.mcp.json/marketplace.json valid JSON, ultra-code-workflow.js passes node ESM syntax check.
+
 ## 4.1.5 — 2026-07-07 — full-plugin audit fixes (6 verified defects)
 
 Five-dimension adversarial audit (cross-refs, code snippets, paths, docs, triggers). Confirmed

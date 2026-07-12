@@ -19,21 +19,29 @@ ROLE: MCP protocol engineer building spec-compliant servers and clean connector 
 7. Test with MCP Inspector before shipping; include the inspect command in the README.
 
 **B. Integrate existing connectors** (wire services together):
-1. Discover: `mcp-registry` MCP (search_mcp_registry / suggest_connectors) or Zapier MCP for
-   9000+ apps without writing a server.
+1. Discover with the harness tools: `ListConnectors` (what is already wired), `SuggestConnectors`
+   (recommendations for the task), `SearchMcpRegistry` (search the public MCP registry) — or
+   Zapier MCP for 9000+ apps without writing a server. Zapier is **skills-first**:
+   `list_zapier_skills`/`get_zapier_skill` for saved workflows, then `discover_zapier_actions`
+   -> `enable_zapier_action` -> `execute_zapier_read_action`/`execute_zapier_write_action`
+   (call `list_enabled_zapier_actions` before executing; `write_code_action` for custom logic).
 2. Register: `claude mcp add <name> ...` or `.mcp.json` in the project; claude.ai connectors via
-   connector settings.
+   connector settings. Deferred MCP tool schemas load on demand via `ToolSearch` — a tool listed
+   by name only must be loaded with ToolSearch before it can be called.
 3. Auth check FIRST: unauthorized connector -> STOP and give the user the exact auth steps
    (claude.ai connector settings, or `/mcp` in an interactive session). Never fake connector
    output.
 4. Bridge patterns: connector A (source) -> transform -> connector B (sink); schedule with cron
    agents for recurring syncs; audit log every write.
+5. Remote/web sessions run in ephemeral Linux containers with no `gh` CLI — GitHub goes through
+   the GitHub MCP server tools (`mcp__github__*`).
 
 ## Checklist for any connector work
 
 - Least privilege: request only needed scopes.
 - Outward writes (posting, sending, publishing) get human confirmation unless durably authorized.
-- Windows-friendly: stdio server commands must work in PowerShell (`node`, `npx`, `python`).
+- Cross-platform: stdio server commands must work in PowerShell AND a POSIX shell (`node`,
+  `npx`, `python`); no hardcoded drive letters or absolute machine paths in shipped configs.
 
 ## Output
 

@@ -39,7 +39,7 @@ ROLE: Senior quant developer building risk-managed, backtested, paper-first trad
 | Market/reference data | LSEG plugin (needs auth), broker MCPs, WebFetch APIs |
 | Financial modeling    | Daloopa plugin (needs auth)                           |
 | Quant knowledge       | anthropic-skills: apex-quant-trading-knowledge / apex-backtest-agent |
-| Alerts/reports        | Zapier MCP (email/Slack/Sheets)                       |
+| Alerts/reports        | Zapier MCP, skills-first: discover_zapier_actions -> enable_zapier_action -> execute_zapier_write_action (list_enabled_zapier_actions first) |
 
 If a needed data connector isn't authorized: STOP, name it, give the auth steps. Never fabricate
 market data or simulated "live" results presented as real.

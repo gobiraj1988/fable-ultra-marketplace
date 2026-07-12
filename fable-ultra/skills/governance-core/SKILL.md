@@ -15,7 +15,7 @@ The human remains accountable for every approval. If a mechanism below is absent
 | Class | Examples | Gate |
 |-------|----------|------|
 | **irreversible** | delete/overwrite files, send/publish/post, live trade, money movement, external-account change | **NEEDS-APPROVAL** — explicit per-action human OK (X-LAW 09/10) |
-| **expensive** | large multi-agent Workflow, paid-API calls, long paid-model runs | budget check + written cost ESTIMATE first (§3) |
+| **expensive** | large multi-agent Workflow, paid-API calls, long paid-model runs, `isolation:'worktree'` runs, `'fable'`-tier (Fable 5) runs, high/max-effort agents | budget check + written cost ESTIMATE first (§3) |
 | **risky** | security-affecting, data-exposing, credential-touching | risk assessment first (§5) |
 | **routine** | read-only, local scratch edits, analysis with no external effect | ALLOW |
 
@@ -38,15 +38,20 @@ EVIDENCE: <measured fact, file path, or clearly-labeled ESTIMATE — never fabri
 
 ## 3. Budget mechanism (ledger + hard stop)
 
-Ledger: `J:\fable 5\fable-ultra\governance\budget.md`, columns
+Ledger: `governance/budget.md` under the plugin root (`${CLAUDE_PLUGIN_ROOT}` when set), columns
 `date | item | est-cost | running-total | limit`. Token/cost figures MUST be measured from a
 real run, or clearly labeled ESTIMATE — never invented (X-LAW 03/10). For model prices, consult
 the `claude-api` skill; do not guess. Before an expensive action: read the ledger, add the new
 estimate to the running total, and if it meets or exceeds the limit return **BLOCK** and ask the
 human to raise the limit.
 
+Inside a Workflow run, the `budget` global is the LIVE enforcement complement to this ledger:
+`{ total, spent(), remaining() }` is a hard ceiling — `agent()` THROWS once it is exhausted. Set
+`total` from the ledger's remaining headroom, then write the run's measured spend back to budget.md.
+
 ```powershell
-$dir = "J:\fable 5\fable-ultra\governance"
+$root = if ($env:CLAUDE_PLUGIN_ROOT) { $env:CLAUDE_PLUGIN_ROOT } else { "." }  # PS 5.1-safe
+$dir = Join-Path $root "governance"
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
 $led = Join-Path $dir "budget.md"
 if (-not (Test-Path $led)) { "| date | item | est-cost | running-total | limit |","| --- | --- | --- | --- | --- |" | Set-Content $led -Encoding UTF8 }
@@ -59,12 +64,13 @@ To check the hard stop, parse the last `running-total` and `limit`; if running-t
 
 ## 4. Audit trail (every gated decision)
 
-Append to `J:\fable 5\fable-ultra\governance\audit.md` for every decision above routine:
+Append to `governance/audit.md` under the plugin root for every decision above routine:
 `timestamp | action | decision | reason | approver`. Approver is the human's name/OK for
 NEEDS-APPROVAL, or `system` for automated ALLOW/BLOCK.
 
 ```powershell
-$dir = "J:\fable 5\fable-ultra\governance"
+$root = if ($env:CLAUDE_PLUGIN_ROOT) { $env:CLAUDE_PLUGIN_ROOT } else { "." }  # PS 5.1-safe
+$dir = Join-Path $root "governance"
 if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir | Out-Null }
 $aud = Join-Path $dir "audit.md"
 if (-not (Test-Path $aud)) { "| timestamp | action | decision | reason | approver |","| --- | --- | --- | --- | --- |" | Set-Content $aud -Encoding UTF8 }
