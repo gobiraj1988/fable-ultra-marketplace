@@ -1,18 +1,27 @@
 ---
 name: vision-ocr
-description: Image-reading and OCR builder for the fable-ultra plugin. Use when the user wants to OCR anything, read an image, extract text from an image/PDF/scan, convert an image to text/Excel/JSON, read invoices/receipts/forms/handwriting/construction drawings, do document extraction, recognize handwriting, or asks for an "image reading OCR creator". Builds pipelines that turn photos, scanned PDFs, and drawing sheets into clean text or validated structured data.
+description: Image-reading and OCR builder for the fable-ultra plugin. Use when the user wants to OCR anything, read an image, extract text from an image/PDF/scan, convert an image to text/Excel/JSON, read invoices/receipts/forms/handwriting/construction drawings, do document extraction, recognize handwriting, or asks for an "image reading OCR creator". Builds pipelines that turn photos, scanned PDFs, and drawing sheets into clean text or validated structured data. NOT for image generation/editing, NOT for extracting text from born-digital PDFs that already have a text layer (use pdfplumber directly), and NOT for a one-off vision Q&A on a single pasted image — answer those inline without building a pipeline.
 ---
 
 # Vision OCR — Image Reading & Extraction Builder
 
 Build OCR/vision extraction tools. Every claim below maps to a real mechanism — no magic accuracy, no silent guessing.
 
+## 0. Plan first, route, gate spend
+
+Operate under the shared discipline contract `$FU\knowledge\ai\fable5-discipline.md` — plan-first, verify-by-execution evidence in the form `<command> -> exit <code> -> "<output>"`, independent critique. `$FU` resolves per doctrine section 4 (env `FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`).
+
+- **Written plan BEFORE any code**, containing exactly four items: engine choice (table below), target JSON schema, sample source (where the >= 20 labeled docs come from), and per-field acceptance thresholds. No plan, no code.
+- **One pipeline stage at a time** — build and execution-test each stage of section 2 before starting the next; never scaffold all six at once.
+- **Large builds route through ultra-code** (which loads model-max) rather than being improvised inline.
+- **Paid vision-API spend is gated through governance-core** with a budget estimate first (pages x avg tokens/page x current price from claude-api). No estimate, no paid calls.
+
 ## 1. Engine picker (decide this FIRST)
 
 | Input | Engine | Why |
 |---|---|---|
 | Born-digital PDF (has a text layer) | pdfplumber / pdf.js — extract text directly. NEVER OCR it | OCR degrades perfect text. Check for a text layer FIRST — across pages, None-safe: `python -c "import pdfplumber; d=pdfplumber.open('doc.pdf'); print([bool(p.extract_text()) for p in d.pages])"` (mixed True/False = hybrid PDF: extract text pages directly, OCR only the False pages) |
-| Clean printed scans, high volume, zero budget | Tesseract locally (Windows: `choco install tesseract` / `winget install UB-Mannheim.TesseractOCR`; Linux: `sudo apt-get install tesseract-ocr`; macOS: `brew install tesseract`) | Free, fast, good on clean print |
+| Clean printed scans, high volume, zero budget | Tesseract locally (`choco install tesseract` / `winget install UB-Mannheim.TesseractOCR`) | Free, fast, good on clean print |
 | Complex layouts, tables, handwriting, drawings, mixed content | Claude vision API — send the image, ask for structured output | Layout understanding beats character-level OCR |
 | Production systems | Hybrid: cheap engine first, escalate hard pages to the vision model | Cost control without accuracy loss |
 
@@ -38,6 +47,7 @@ Build OCR/vision extraction tools. Every claim below maps to a real mechanism �
 - Report **field-level accuracy as measured** (e.g., "invoice_total: 19/20 correct on the sample"), not a global vibe.
 - Never claim "99% accurate" — or any number — without that measurement backing it.
 - Surface per-field confidence whenever the engine provides it (Tesseract word confidences, model self-reported confidence fields in the schema).
+- **No labeled sample exists?** Two paths only — (a) the user labels 20 real documents now (fastest, preferred), or (b) the tool ships explicitly stamped **UNMEASURED** in its report and README, with the human-review queue (step 6) mandatory for EVERY record until a measured sample exists. Never a third option of unstated accuracy.
 
 ## 5. QS tie-in (construction drawings / BOQ pages)
 
@@ -60,12 +70,12 @@ Tight-schema extraction works well on small/cheap vision tiers. Pattern:
 ## 7. Deliverables — every OCR tool ships with
 
 - [ ] The pipeline code (preprocess → classify → extract → structure → validate → route)
-- [ ] A labeled-sample accuracy report (>= 20 docs, field-level numbers)
+- [ ] A labeled-sample accuracy report (>= 20 docs, field-level numbers) — or the UNMEASURED stamp per section 4
 - [ ] A human-review queue file (CSV/JSON) for low-confidence and `[UNREADABLE]` items
 
-Quick checks (any shell — PowerShell or bash; install Tesseract per the engine table above):
+Windows quick checks:
 
-```sh
+```powershell
 tesseract --version                              # engine present?
 python -m pip install pdfplumber pytesseract pillow anthropic
 python -c "import pdfplumber; p=pdfplumber.open('doc.pdf'); print(bool(p.pages[0].extract_text()))"  # text layer?

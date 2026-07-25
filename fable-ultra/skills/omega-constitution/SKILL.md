@@ -1,6 +1,6 @@
 ---
 name: omega-constitution
-description: The governance backbone of fable-ultra V3 OMEGA. Loaded at the start of any OMEGA/V3 task, any autonomous or multi-step build, or whenever the user invokes the OMEGA constitution, the omega-orchestrator, or the GOAL->...->SCALE lifecycle. Encodes the 10 OMEGA Laws, the standard lifecycle, the mandatory FINAL DELIVERABLE template, and the success definition that every V3 project must satisfy. Other skills defer to this one for the rules of engagement.
+description: The governance backbone of fable-ultra V3 OMEGA. Loaded at the start of any OMEGA/V3 task, any autonomous or multi-step build, or whenever the user invokes the OMEGA constitution, the omega-orchestrator, or the GOAL->...->SCALE lifecycle. Encodes the 10 OMEGA Laws, the standard lifecycle, the mandatory FINAL DELIVERABLE template, and the success definition that every V3 project must satisfy. Other skills defer to this one for the rules of engagement. NOT for quick questions, single-file edits, or trivial lookups — governance overhead applies only to multi-step builds.
 ---
 
 # OMEGA Constitution — Rules of Engagement for V3
@@ -33,6 +33,30 @@ until the done-condition holds or an OMEGA Law forces a stop.
 
 Compilation · Tests · Verification · Performance · Security · Documentation · Acceptance criteria.
 Done = every applicable gate passes, with evidence.
+
+## Execution evidence (what Law 2 accepts)
+
+Every "done" or gate-pass claim quotes `<command> -> exit <code> -> "<output snippet>"`.
+Paraphrased or unquoted results are NOT evidence.
+
+- PASS - `pytest -q -> exit 0 -> "503 passed"` — gate closed.
+- FAIL - `pytest -q -> exit 1 -> "2 failed - test_x"` — gate open; loop BUILD<->VERIFY.
+
+Plan-first, this evidence format, independent critique, and the `$FU` portable home are defined once
+in the shared discipline contract `$FU\knowledge\ai\fable5-discipline.md` — follow it, don't restate it.
+`$FU` resolves per its section 4 - env `FABLE_ULTRA_HOME`, else legacy `J:\fable 5\fable-ultra` if
+present, else `%USERPROFILE%\.fable-ultra`.
+
+## Failure modes (handle explicitly)
+
+- **Verifier disagrees with builder** — verifier verdict stands (Law 5); builder gets one rebuttal
+  with NEW evidence, else output BLOCKED and escalate both transcripts to the human.
+- **Gate cannot run in this environment** (no compiler, network, device) — mark it SKIPPED-ENV in
+  the audit trail, downgrade the completion decision to PARTIAL, and name the unproven gate.
+- **Budget exhausted mid-lifecycle** — stop at the stage boundary, log spend and remaining work,
+  output PARTIAL with a resume plan. Never thin out VERIFY to save tokens (Law 8 yields to 5).
+- **Stale skill mapping** — mapped skill missing or renamed? Don't guess - flag the table row for
+  `self-upgrade`; route via `skill-factory` or the nearest capstone meanwhile.
 
 ## FINAL DELIVERABLE (every non-trivial project must produce this)
 
@@ -73,7 +97,13 @@ packs, better benchmarks, better research. Success = more verified knowledge, mo
 more successful REAL projects, more efficient workflows, less token waste — NOT more complexity.
 A version bump is only ever the *record* of a real, verified in-place improvement, never the goal.
 
-## Orchestration
+## Orchestration mechanics
 
-For multi-stage work, `ultra-code` runs the lifecycle and `meta-brain` monitors it. Apply
-`model-max` discipline throughout. Read `memory/lessons.md` at start; append a lesson at end.
+For multi-stage work, `ultra-code` drives the lifecycle and `meta-brain` monitors it. RESEARCH,
+BUILD, and VERIFY run as Workflow subagents returning structured outputs — RESEARCH returns
+findings + sources, BUILD returns files changed + its own run evidence, VERIFY returns per-gate
+PASS/FAIL with quoted evidence in the Law-2 format above. PLAN and the completion decision stay in
+the orchestrator. The VERIFY subagent is adversarial - it receives the goal and the diff but NOT
+the builder's reasoning, re-runs the gates itself, probes edge cases trying to break the work, and
+must report at least one attempted falsification (or state why none applies). Apply `model-max`
+discipline throughout. Read `memory/lessons.md` at start; append a lesson at end.

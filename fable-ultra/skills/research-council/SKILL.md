@@ -14,6 +14,9 @@ verification evidence, **03** never hide uncertainty, **04** evidence > confiden
 open — it does **not** make the answer omniscient or guaranteed correct. Surface residual
 uncertainty; never present consensus as proof (Law 03).
 
+Process discipline — plan-first, verify-by-execution evidence in the format `<command> -> exit <code> -> "<output>"`, independent critique, and the portable `$FU` home — follows the shared
+contract in `knowledge/ai/fable5-discipline.md`; read it once, do not restate it here.
+
 ## The eight roles (each a subagent with one job)
 
 | Role | Mandate | Primary output |
@@ -35,11 +38,10 @@ outputs are structured, and `resumeFromRunId` on re-runs to reuse cached role wo
 
 ```js
 // Sketch — adapt prompts/schemas to the real question. Not run verbatim.
-// Canonical API: agent(promptString, {label, schema, model, effort, phase}) · parallel(thunks) · pipeline(items, ...stages)
-// effort:'max' on the Critic/Auditor seats and the verify pass; default effort elsewhere (Law 08)
+// Canonical API: agent(promptString, {label, schema, model, phase}) · parallel(thunks) · pipeline(items, ...stages)
 const question = "<the decision to resolve>";
 const ROLES = ["scientist","critic","builder","tester","auditor","economist","riskofficer","strategist"];
-const esc = (r) => (r === "critic" || r === "auditor") ? "fable" : undefined; // escalate adversarial seats to Fable 5 (model-router)
+const esc = (r) => (r === "critic" || r === "auditor") ? "opus" : undefined; // escalate adversarial seats (model-router)
 
 // 1) INDEPENDENT RESEARCH — parallel(THUNKS) barrier: all views formed before anyone reads another
 const views = await parallel(ROLES.map(r => () =>
@@ -52,13 +54,31 @@ const debate = await agent(debatePrompt(views, xexam), { label: "debate", schema
 // 4) CONSENSUS ATTEMPT — where do all eight agree / where is it irreducibly split
 const consensus = await agent(consensusPrompt(debate), { label: "consensus", schema: ConsensusSchema });
 // 5) VERIFICATION PASS — re-check every load-bearing claim against its cited source (Law 05)
-const verified = await agent(verifyPrompt(consensus), { label: "verify", model: "fable", effort: "max", schema: VerifySchema });
+const verified = await agent(verifyPrompt(consensus), { label: "verify", model: "opus", schema: VerifySchema });
 // 6) RECOMMENDATION — Strategist writes the decision using ONLY verified claims
 const decision = await agent(decisionPrompt(verified), { label: "decision", schema: DecisionSchema });
 ```
 
 If you are not running an explicit Workflow, execute the same six stages inline yourself in the
 same order — the discipline, not the tool, is what matters.
+
+## Output schemas (the `schema` values above — reject and re-run any stage that fails its shape)
+
+```ts
+ViewSchema         = { role, claims: [{ id, text, kind: "fact"|"judgment", source, confidence: "hi"|"med"|"lo" }], assumptions: [string] }  // source REQUIRED when kind="fact" (Law 01)
+DisagreementSchema = { role, disagreements: [{ claimId, holder, objection, counterEvidence }] }
+DebateSchema       = { rounds: [{ claimId, challenge, rebuttal, status: "upheld"|"refuted"|"unresolved" }] }
+ConsensusSchema    = { agreed: [claimId], split: [{ claimId, positions: [{ role, stance }] }] }
+VerifySchema       = { checked: [{ claimId, source, verdict: "verified"|"failed"|"unreachable", note }] }
+DecisionSchema     = { recommendation, alternatives: [string], residualUncertainty: [string], usedClaimIds: [claimId] }
+```
+
+## Budgets (hard caps — stop at the cap, never drift)
+
+- **Sources:** max 8 per role in Stage 1 (Scientist may use 12); dedupe before citing.
+- **Debate:** max 2 rounds per disputed claim; still `unresolved` after round 2 -> record as split (Law 03), do not loop.
+- **Tokens:** ~15k output per Stage-1 seat, ~10k per later stage, ~150k for the whole council; on breach, summarize what exists and move on.
+- **Retries:** one re-run per failed schema; a second failure escalates that seat's model once (model-router), then reports the gap instead of retrying.
 
 ## Grounding — no source, no claim (Law 01)
 
@@ -76,8 +96,7 @@ same order — the discipline, not the tool, is what matters.
 ## Model tier escalation (model-router)
 
 Ask the **model-router** skill to escalate the adversarial seats — **Critic** and **Auditor** —
-to the strongest available tier: `model:'fable'` (Fable 5, the Mythos-class tier above Opus). Their
-job is to break claims; capability matters most there, and the verify pass gets the same tier.
+to the strongest available tier (their job is to break claims; capability matters most there).
 Run the mechanical seats at standard tier to respect Law 08 (optimize cost). If model-router is
 absent, keep all seats on the selected model and **say so** — never claim escalation you didn't do
 (Law 03). Local **Ollama** models may serve standard seats when configured; never a verify seat.
@@ -95,16 +114,19 @@ absent, keep all seats on the selected model and **say so** — never claim esca
 
 ## Close-out (Laws 07, 09)
 
-- Append one dated lesson to `memory/lessons.md` under the plugin root.
+- Append one dated lesson to `$FU\memory\lessons.md`.
 - Append durable, source-attributed findings to the knowledge-lake — via the **knowledge-lake**
-  skill if installed, else to `memory/knowledge-lake.md` under the plugin root:
+  skill if installed, else to `$FU\memory\knowledge-lake.md`.
+- `$FU` resolves per `knowledge/ai/fable5-discipline.md` section 4: env `FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`.
 
 ```powershell
-$root = if ($env:CLAUDE_PLUGIN_ROOT) { $env:CLAUDE_PLUGIN_ROOT } else { "." }  # PS 5.1-safe
+$FU = if ($env:FABLE_ULTRA_HOME) { $env:FABLE_ULTRA_HOME }
+      elseif (Test-Path "J:\fable 5\fable-ultra") { "J:\fable 5\fable-ultra" }
+      else { "$env:USERPROFILE\.fable-ultra" }
 $stamp = Get-Date -Format yyyy-MM-dd
-Add-Content (Join-Path $root "memory\lessons.md") `
+Add-Content "$FU\memory\lessons.md" `
   "$stamp [research-council] <question> -> <verdict>; unresolved: <what stayed split>" -Encoding utf8
-Add-Content (Join-Path $root "memory\knowledge-lake.md") `
+Add-Content "$FU\memory\knowledge-lake.md" `
   "$stamp | FINDING: <claim> | SOURCE: <url> | CONFIDENCE: <hi/med/lo> | via research-council" -Encoding utf8
 ```
 

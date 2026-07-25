@@ -55,7 +55,6 @@ even though it never says Android.
 - Reasoning strategy and self-verification
 - Evaluation: how quality is measured, test cases
 - Guardrails, failure handling, and cost/latency budget
-- Model tier AND reasoning effort chosen per agent stage (e.g. cheap tier + low effort for mechanical steps, top tier + high/max effort for judgment)
 
 ## DATA / ANALYTICS
 - The exact question(s) the analysis must answer

@@ -1,50 +1,67 @@
 ---
 name: mcp-connector
-description: MCP connector/server builder and integrator — build custom MCP servers (tools, resources, prompts), wire existing connectors into Claude Code, and design connector-connecting bridge systems. Use when the user asks to create an MCP server, connect a service/API to Claude, integrate connectors, or build "connector connecting systems".
+description: MCP connector/server builder and integrator — build custom MCP servers (tools, resources, prompts), wire existing connectors into Claude Code, and design connector-connecting bridge systems. Use when the user asks to create an MCP server, connect a service/API to Claude, integrate connectors, or build "connector connecting systems". NOT for RAG/API-client apps (defer to ai-builder) or plain settings edits with no new server/wiring (defer to update-config).
 ---
 
 # MCP Connector Build & Integration
 
 ROLE: MCP protocol engineer building spec-compliant servers and clean connector integrations.
+Discipline contract `$FU\knowledge\ai\fable5-discipline.md` — plan-first, evidence
+`<command> -> exit <code> -> "<output>"`, independent critique. $FU resolves per its section 4
+(env FABLE_ULTRA_HOME -> legacy J:\fable 5\fable-ultra if present -> %USERPROFILE%\.fable-ultra).
 
 ## Two modes — pick by request
 
 **A. Build a new MCP server** (expose an API/service/local system to Claude):
-1. SDK: TypeScript (`@modelcontextprotocol/sdk`) or Python (`mcp`) — default TypeScript.
-2. Transport: stdio for local, streamable HTTP for remote.
-3. Define tools with tight JSON schemas + one-line descriptions that say WHEN to use them.
-4. Resources for read-only data; prompts for reusable templates.
-5. Auth: env vars / OAuth — never hardcode secrets; document every required variable.
-6. Error handling: structured errors, timeouts, rate-limit backoff.
-7. Test with MCP Inspector before shipping; include the inspect command in the README.
+1. PLAN FIRST — written tool inventory (name/purpose/input schema/output/failure cases); no
+   code before it exists.
+2. SDK: TypeScript (`@modelcontextprotocol/sdk`) or Python (`mcp`) — default TypeScript.
+   Transport: stdio local, streamable HTTP remote.
+3. Build ONE tool at a time — implement, run, capture evidence, then next. Tight JSON schemas
+   + descriptions saying WHEN to use. Resources = read-only data; prompts = templates.
+4. Auth: env vars / OAuth — never hardcode secrets; document every variable. Structured
+   errors, timeouts, rate-limit backoff.
 
 **B. Integrate existing connectors** (wire services together):
 1. Discover with the harness tools: `ListConnectors` (what is already wired), `SuggestConnectors`
-   (recommendations for the task), `SearchMcpRegistry` (search the public MCP registry) — or
-   Zapier MCP for 9000+ apps without writing a server. Zapier is **skills-first**:
+   (recommendations for this task), `SearchMcpRegistry` (public MCP registry) — before proposing
+   to build anything. Zapier MCP covers 9000+ apps with no server, and is **skills-first**:
    `list_zapier_skills`/`get_zapier_skill` for saved workflows, then `discover_zapier_actions`
    -> `enable_zapier_action` -> `execute_zapier_read_action`/`execute_zapier_write_action`
-   (call `list_enabled_zapier_actions` before executing; `write_code_action` for custom logic).
-2. Register: `claude mcp add <name> ...` or `.mcp.json` in the project; claude.ai connectors via
-   connector settings. Deferred MCP tool schemas load on demand via `ToolSearch` — a tool listed
-   by name only must be loaded with ToolSearch before it can be called.
-3. Auth check FIRST: unauthorized connector -> STOP and give the user the exact auth steps
-   (claude.ai connector settings, or `/mcp` in an interactive session). Never fake connector
-   output.
-4. Bridge patterns: connector A (source) -> transform -> connector B (sink); schedule with cron
-   agents for recurring syncs; audit log every write.
-5. Remote/web sessions run in ephemeral Linux containers with no `gh` CLI — GitHub goes through
-   the GitHub MCP server tools (`mcp__github__*`).
+   (`list_enabled_zapier_actions` first; `write_code_action` for custom logic).
+2. Register: `claude mcp add <name> ...` or project `.mcp.json`; claude.ai connectors via settings.
+   Deferred tool schemas load on demand — a tool listed by name only is NOT callable until
+   `ToolSearch` (`select:<name>`) loads its schema; calling first is an InputValidationError.
+3. Auth check FIRST: unauthorized -> STOP, give exact auth steps (connector settings or
+   `/mcp`). Never fake connector output.
+4. Bridges: source -> transform -> sink; cron agents for recurring syncs; audit-log every write.
+5. Remote/web sessions are ephemeral Linux containers with no `gh` CLI — GitHub work goes through
+   the GitHub MCP tools (`mcp__github__*`), not shell git hosting commands.
 
-## Checklist for any connector work
+## VERIFY (mandatory, both modes)
 
-- Least privilege: request only needed scopes.
-- Outward writes (posting, sending, publishing) get human confirmation unless durably authorized.
-- Cross-platform: stdio server commands must work in PowerShell AND a POSIX shell (`node`,
-  `npx`, `python`); no hardcoded drive letters or absolute machine paths in shipped configs.
+Capture each step in the evidence format — no "should work":
+1. MCP Inspector against the server (command + output).
+2. Live `claude mcp add <name> ...` then `claude mcp list` -> exit 0, server connected.
+3. Smoke test: invoke >= 1 tool through Claude Code; paste the real result.
+
+## Failure modes — check each
+
+- stdio: never log to stdout (console.log/print) — corrupts JSON-RPC; use stderr.
+- Schema rejects: avoid exotic unions/optionals; test schemas with real payloads.
+- OAuth token expiry: refresh + clear re-auth message; no silent failure.
+- Cross-platform npx/node path/quoting: the registered command must run in PowerShell AND a
+  POSIX shell — no hardcoded drive letters or machine paths in shipped configs (`cmd /c npx` on
+  Windows if needed); test the exact registered command on the target platform.
+- Streamable HTTP: handle session IDs and reconnects; stateless handlers drop mid-run state.
+
+## Guardrails
+
+Least-privilege scopes only. Outward writes (posting, sending, publishing) gate through
+`governance-core` (ALLOW / BLOCK / NEEDS-APPROVAL) unless durably authorized.
 
 ## Output
 
-Mode A: server source + manifest, env-var table, MCP Inspector test transcript, `.mcp.json`
-snippet, README. Mode B: connector map (source->sink table), registration commands, auth
-checklist, bridge code/config.
+Mode A: tool inventory table, server source + manifest, env-var table, VERIFY transcript,
+`.mcp.json` snippet, README. Mode B: connector map (source->sink table), registration
+commands, auth checklist, bridge code/config.
