@@ -38,14 +38,16 @@ outputs are structured, and `resumeFromRunId` on re-runs to reuse cached role wo
 
 ```js
 // Sketch — adapt prompts/schemas to the real question. Not run verbatim.
-// Canonical API: agent(promptString, {label, schema, model, phase}) · parallel(thunks) · pipeline(items, ...stages)
+// Canonical API: agent(promptString, {label, schema, model, effort, phase}) · parallel(thunks) · pipeline(items, ...stages)
+// effort:'max' on the adversarial seats (Critic/Auditor) and the verify pass; default/low elsewhere (Law 08)
 const question = "<the decision to resolve>";
 const ROLES = ["scientist","critic","builder","tester","auditor","economist","riskofficer","strategist"];
-const esc = (r) => (r === "critic" || r === "auditor") ? "opus" : undefined; // escalate adversarial seats (model-router)
+const esc = (r) => (r === "critic" || r === "auditor") ? "fable" : undefined; // adversarial seats -> Fable 5 (model-router)
+const eff = (r) => (r === "critic" || r === "auditor") ? "max" : undefined;   // adversarial seats -> effort:'max'
 
 // 1) INDEPENDENT RESEARCH — parallel(THUNKS) barrier: all views formed before anyone reads another
 const views = await parallel(ROLES.map(r => () =>
-  agent(rolePrompt(r, question), { label: r, model: esc(r), schema: ViewSchema })));
+  agent(rolePrompt(r, question), { label: r, model: esc(r), effort: eff(r), schema: ViewSchema })));
 // 2) CROSS-EXAMINATION — each reads all others, flags disagreements
 const xexam = await parallel(views.map((v, i) => () =>
   agent(crossExamPrompt(v, views), { label: "xexam:" + ROLES[i], schema: DisagreementSchema })));
@@ -54,7 +56,7 @@ const debate = await agent(debatePrompt(views, xexam), { label: "debate", schema
 // 4) CONSENSUS ATTEMPT — where do all eight agree / where is it irreducibly split
 const consensus = await agent(consensusPrompt(debate), { label: "consensus", schema: ConsensusSchema });
 // 5) VERIFICATION PASS — re-check every load-bearing claim against its cited source (Law 05)
-const verified = await agent(verifyPrompt(consensus), { label: "verify", model: "opus", schema: VerifySchema });
+const verified = await agent(verifyPrompt(consensus), { label: "verify", model: "fable", effort: "max", schema: VerifySchema });
 // 6) RECOMMENDATION — Strategist writes the decision using ONLY verified claims
 const decision = await agent(decisionPrompt(verified), { label: "decision", schema: DecisionSchema });
 ```
@@ -96,8 +98,10 @@ DecisionSchema     = { recommendation, alternatives: [string], residualUncertain
 ## Model tier escalation (model-router)
 
 Ask the **model-router** skill to escalate the adversarial seats — **Critic** and **Auditor** —
-to the strongest available tier (their job is to break claims; capability matters most there).
-Run the mechanical seats at standard tier to respect Law 08 (optimize cost). If model-router is
+to the strongest available tier: `model: 'fable'` (Fable 5, the tier above Opus) with `effort: 'max'`.
+Their job is to break claims; capability matters most there, and the Stage-5 verify pass gets the
+same `model:'fable'` + `effort:'max'` pairing. Run the mechanical seats at standard tier and
+`effort:'low'` where the work is summarizing or formatting, to respect Law 08 (optimize cost). If model-router is
 absent, keep all seats on the selected model and **say so** — never claim escalation you didn't do
 (Law 03). Local **Ollama** models may serve standard seats when configured; never a verify seat.
 
@@ -128,6 +132,15 @@ Add-Content "$FU\memory\lessons.md" `
   "$stamp [research-council] <question> -> <verdict>; unresolved: <what stayed split>" -Encoding utf8
 Add-Content "$FU\memory\knowledge-lake.md" `
   "$stamp | FINDING: <claim> | SOURCE: <url> | CONFIDENCE: <hi/med/lo> | via research-council" -Encoding utf8
+```
+
+POSIX equivalent (Linux/macOS, incl. remote containers — same two appends):
+
+```bash
+FU="${FABLE_ULTRA_HOME:-${CLAUDE_PLUGIN_ROOT:-$HOME/.fable-ultra}}"; stamp=$(date -u +%Y-%m-%d)
+mkdir -p "$FU/memory"
+echo "$stamp [research-council] <question> -> <verdict>; unresolved: <what stayed split>" >> "$FU/memory/lessons.md"
+echo "$stamp | FINDING: <claim> | SOURCE: <url> | CONFIDENCE: <hi/med/lo> | via research-council" >> "$FU/memory/knowledge-lake.md"
 ```
 
 - Keep the per-stage audit trail (each role's raw output, disagreements, verify results) so the

@@ -1,5 +1,64 @@
 # Changelog — fable-ultra
 
+## 5.1.0 — 2026-07-25 — merge: v5 tier discipline + the v4.2.0 correctness/connector line
+
+Two lineages both forked from 4.1.5 — v5.0.0 (tier-calibrated discipline) and a parallel 4.2.0
+(harness-truth + connector + portability fixes). This release is the merge: v5.0.0 is the base and
+every v5 advance is preserved untouched; the 4.2.0 line is ported on top. Skill count stays **26**.
+
+Ported onto the v5 base, in three file groups with an adversarial verifier per group:
+
+- **Harness truth.** Three skills asserted "there is NO standalone Workflow `resumeFromRunId`
+  recovery tool" / "never assume a resume capability that is not present". Resume IS real, so the
+  claim cost real money — a crashed run was told to relaunch from zero instead of replaying its
+  cached `agent()` prefix from `journal.jsonl`. `workflow-factory`, `ecosystem-orchestrator` and
+  `meta-brain` now teach resume-first recovery, with the run-state file demoted to a supplement.
+  `meta-brain`'s phantom `mcp__scheduled-tasks__*` tool is replaced by the real CronCreate /
+  ScheduleWakeup / Monitor, plus TaskOutput/TaskUpdate and SendMessage steering of live agents.
+- **The dry-run gate now actually gates (verified by execution).** `workflow-factory`'s template
+  gate had three defects, all caught by the group's own adversarial verifier and each fixed and
+  re-proven: (1) the POSIX block referenced `$STUBS`/`$GUARD` that were only ever defined as
+  PowerShell variables, so on Linux it wrote a file that declared `__wf` and never called it —
+  a deliberately broken template exited 0 printing nothing (**false pass**); (2) the stub `budget`
+  lacked `spent()`, falsely rejecting any template that reports spend; (3) the `workflow` global
+  was missing, falsely rejecting nesting templates. Now: good → `DRY-RUN PASS` exit 0; broken →
+  `DRY-RUN FAIL - this template is broken` exit 1; `budget.spent()` and `workflow()` both pass.
+  A silent exit 0 with no PASS line is now itself defined as a FAIL. (Law 02 again: a verification
+  tool must itself be verified.)
+- **Connector layer rebuilt.** `.mcp.json`'s per-skill map went from 7 entries to **26** (verified
+  by set-diff against `skills/`), keeping v5's own additions (secrets env-only, every entry must
+  answer a real tool call before shipping, session-level connectors, paper/data-scoped trading).
+  Added current discovery (`ListConnectors`/`SuggestConnectors`/`SearchMcpRegistry` + `ToolSearch`
+  deferred loading), the Zapier skills-first flow, bidirectional Figma with `/figma-use` required
+  before `use_figma`, and remote-session facts (Linux containers, GitHub via `mcp__github__*`,
+  Playwright pre-installed). `mcp-connector` updated to match.
+- **Both routing dials, everywhere.** `effort` now appears in 12 files (was 2), `isolation:'worktree'`
+  in 8, `agentType` in 5. Adversarial seats route to `model:'fable'` + `effort:'max'`
+  (research-council, agent-factory, agent-system); the ultra-code script runs plan/verify/review at
+  `effort:'high'` and logs `budget.spent()` per iteration; governance-core counts worktree runs,
+  fable-tier runs and high-effort agents as expensive-class cost drivers.
+- **Cross-platform for real.** v5's `$FU` home resolved through PowerShell-only calls
+  (`Test-Path`, `$env:USERPROFILE`) and could not resolve on the Linux containers this plugin also
+  runs in. Every `$FU` block, ledger/audit/metrics append and validator now carries a POSIX
+  equivalent, and PowerShell stays 5.1-safe (no PS7 `??`).
+- **Docs/manifest.** Restored two CHANGELOG headings that had gone missing (4.2.0 and 4.1.5 content
+  was hanging under 4.2.1). README install steps are placeholder-based with Windows + POSIX
+  examples plus a GitHub-marketplace option, and the stale "~5-min cache window" pacing advice is
+  replaced with match-the-wait-to-what-you-are-waiting-for. The manifest's performance claim
+  ("Sonnet 5/Opus 4.8 match-or-exceed solo Fable 5") is softened to the mechanism it implements —
+  no benchmark data ships in this package, and Law 1 forbids unmeasured benchmark claims. The
+  mechanism, and every honest hedge around it, is unchanged in the README and discipline file.
+
+Deliberately unchanged: skill count (26), every safety rail (paper-mode default, human
+confirmation for irreversible actions, no fabricated output, loop ceilings), and all v5 discipline
+(tier overlay, fresh-this-turn done-gate, resume-safe reconstruction, independent critique, staged
+domain gates, loop pathologies, backtest plausibility screen, ledger recompute).
+
+Verified: 26/26 frontmatters strict-YAML parse (longest description 1013 ≤ 1024); manifest
+description 471 ≤ 500; `.mcp.json` and `marketplace.json` valid JSON with a 26-entry connector map;
+workflow script passes the wrapped node ESM check; dry-run gate proven on 4 template cases;
+GFM table column counts correct; zero stale-claim matches remaining.
+
 ## 5.0.0 — 2026-07-20 — the tier-calibrated discipline overlay (Fable-Ultra 5)
 
 The headline advance: process failures are NOT tier-agnostic, so the discipline no longer is

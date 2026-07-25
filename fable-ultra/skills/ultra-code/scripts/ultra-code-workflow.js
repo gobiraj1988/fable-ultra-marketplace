@@ -1,6 +1,13 @@
 // Reference ultra-code Workflow script — PLAN -> BUILD -> VERIFY -> REVIEW -> LOOP.
 // Adapt stage prompts/schemas to the actual task before running. Plain JS (no TS).
 // Pass the goal via args: Workflow({script, args: {goal: "...", maxIterations: 10}}).
+//
+// Routing: model: is omitted so every agent inherits the session tier; effort: is set per stage
+// (plan/verify/review run 'high', BUILD inherits — mechanical items can drop to 'low').
+// Add isolation:'worktree' to the BUILD agent ONLY when parallel work items mutate the SAME
+// files — each gets a fresh git worktree, which is expensive, so don't set it by default.
+// Determinism: Date.now(), Math.random(), and argless new Date() THROW inside a workflow script
+// (they would break resumeFromRunId replay) — pass any timestamp/seed in through args.
 
 export const meta = {
   name: 'ultra-code',
@@ -78,7 +85,7 @@ const plan = await agent(
   `Decompose this goal into independent, concretely-scoped work items with a measurable ` +
   `done-condition. Goal: ${goal}. Safety: if the goal involves trading or money movement, every ` +
   `work item must specify paper/dry-run mode; live trading is out of scope.`,
-  { label: 'plan', schema: PLAN_SCHEMA }
+  { label: 'plan', phase: 'Plan', effort: 'high', schema: PLAN_SCHEMA }
 )
 log(`Plan: ${plan.workItems.length} items. Done when: ${plan.doneCondition}`)
 
@@ -111,6 +118,8 @@ while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
         `Execute this work item toward the goal "${goal}". Item: ${JSON.stringify(item)}. ` +
         `Make real changes with tools. If a required MCP connector or credential is missing, ` +
         `return status "blocked" with the exact setup step — never simulate its output.`,
+        // Add isolation: 'worktree' here when parallel items touch the same files; add
+        // effort: 'low' for mechanical items; agentType: '<registered subagent>' to reuse one.
         { label: `build:${item.id}`, phase: 'Build', schema: BUILD_SCHEMA }
       ),
     (built, item) =>
@@ -122,7 +131,7 @@ while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
             `You are an INDEPENDENT verifier — you are given the goal and the files but NOT the builder's ` +
             `reasoning. Run the code/tests where possible THIS turn. Try to REFUTE that it works. ` +
             `Default passes=false if uncertain.`,
-            { label: `verify:${item.id}`, phase: 'Verify', schema: VERDICT_SCHEMA }
+            { label: `verify:${item.id}`, phase: 'Verify', effort: 'high', schema: VERDICT_SCHEMA }
           ).then((verdict) => ({ built, verdict, item }))
   )
 
@@ -145,11 +154,19 @@ while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
     `Do NOT accept a completed item as closing the done-condition unless it was verified fresh this ` +
     `iteration — carried-evidence is a premature-done and must be returned as a missing work item ` +
     `(re-verify: <item id>) instead.`,
-    { label: `review:${iter}`, phase: 'Review', schema: REVIEW_SCHEMA }
+    { label: `review:${iter}`, phase: 'Review', effort: 'high', schema: REVIEW_SCHEMA }
   )
 
   queue = [...failed, ...review.newWorkItems]
   dryRounds = queue.length === 0 ? dryRounds + 1 : 0
+
+  // Per-iteration spend report — only meaningful when the user set a token target.
+  if (budget.total) {
+    log(
+      `Iteration ${iter} spend: ${Math.round(budget.spent() / 1000)}k of ` +
+      `${Math.round(budget.total / 1000)}k (${Math.round(budget.remaining() / 1000)}k left)`
+    )
+  }
 
   // Budget guard: hard-stop before overrunning a user token target.
   if (budget.total && budget.remaining() < 50000) {

@@ -21,18 +21,24 @@ measurably raise task quality. Build that; state the boundary in the deliverable
    critic), one clear responsibility per agent. Gate: role map + orchestration sketch shown
    before code.
 2. **ORCHESTRATE** — Claude Agent SDK; pipeline over barrier; structured-output schemas between
-   stages; adversarial verification on claims (N refuters, majority vote). Gate: the skeleton
-   runs end-to-end on a toy task with real output quoted.
-3. **ROUTE MODELS** — per `model-router` and the discipline doctrine's tier map: strongest model
-   + high effort for judge/verify stages, cheaper tiers + low effort for mechanical stages;
-   graceful degradation when a model is unavailable.
+   stages; adversarial verification on claims (N refuters, majority vote). Subagents run in the
+   BACKGROUND by default (`run_in_background: false` when you need the result synchronously), and
+   `SendMessage` continues an already-spawned agent with its context intact — steer, don't relaunch.
+   Gate: the skeleton runs end-to-end on a toy task with real output quoted.
+3. **ROUTE MODELS + EFFORT** — per `model-router` and the discipline doctrine's tier map. Make the
+   effort axis concrete, never "high-ish": judge / verifier / refuter / critic seats run at
+   `model: 'fable'` (Fable 5, the tier above Opus) with `effort: 'max'`; mid-tier reasoning at
+   Sonnet 5 with `effort: 'medium'`; mechanical extraction/formatting at Haiku 4.5 with
+   `effort: 'low'`. Parallel file-mutating workers additionally take `isolation: 'worktree'`.
+   Graceful degradation when a model is unavailable — and say which tier actually ran (Law 03).
 4. **MEMORY** — file-based or vector memory with explicit write/recall rules; convert relative
    dates to absolute; dedupe before writing.
 5. **EVALS + SELF-IMPROVEMENT** — evals FIRST: a scored benchmark for the system's task.
    Improvement = propose change → run evals → keep only if the score rises. No evals, no
    "self-upgrade" claims.
-6. **SAFETY** — hard iteration ceilings, budget guards, kill switch, audit log, human gate on any
-   irreversible/outward-facing action (Law 10).
+6. **SAFETY** — hard iteration ceilings, budget guards (inside a Workflow run the `budget` global
+   is a HARD ceiling — `agent()` throws when it is exhausted), kill switch, audit log, human gate on
+   any irreversible/outward-facing action (Law 10).
 
 ## Failure modes → countermeasures
 
@@ -48,7 +54,8 @@ measurably raise task quality. Build that; state the boundary in the deliverable
 
 The orchestrator is RUN on a real (small) task and the eval harness is RUN to produce baseline
 scores — both with command + exit code + output quoted. Shipped-as-code-only is not done. An
-independent critic (fresh subagent) reviews the architecture against this checklist.
+independent critic (a fresh subagent at `model: 'fable'` + `effort: 'max'`) reviews the architecture
+against this checklist.
 
 ## MCP connectors
 

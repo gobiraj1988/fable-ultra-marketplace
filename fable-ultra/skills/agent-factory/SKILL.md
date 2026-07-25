@@ -16,7 +16,9 @@ a defined agent beats re-prompting), Law 10 (human approval for irreversible act
 DISCIPLINE: Follow the shared contract in `$FU\knowledge\ai\fable5-discipline.md` — plan-first,
 verify-by-execution evidence in the format `<command> -> exit <code> -> "<output>"`, independent
 critique. `$FU` resolves per doctrine section 4 (env `FABLE_ULTRA_HOME` -> legacy
-`J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`).
+`J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`). PowerShell resolution is
+5.1-safe `if/elseif/else` (never the PS7-only null-coalescing operator); POSIX (Linux/macOS, incl. remote containers):
+`FU="${FABLE_ULTRA_HOME:-${CLAUDE_PLUGIN_ROOT:-$HOME/.fable-ultra}}"`.
 
 ## Honest scope note
 
@@ -50,12 +52,20 @@ Pick ONE form and produce a concrete artifact:
   <system prompt: role, method, output contract, STOP-and-report rules>
   ```
   Create it (PowerShell): `New-Item -ItemType Directory -Force .claude\agents;` then Write the file.
+  POSIX: `mkdir -p .claude/agents` then Write the file.
 - **Inline Workflow agent spec** — dispatched programmatically: a record of
-  `{ prompt, output schema, model, tools[] }` passed to the Workflow tool's `agentType`.
+  `{ prompt, output schema, model, effort, isolation, tools[] }` passed to the Workflow tool's
+  `agentType`. Give parallel file-mutating agents `isolation: 'worktree'` so concurrent runs cannot
+  collide on the same tree.
 
 Every agent MUST declare an output contract (schema or rubric-checkable shape) AND a budget —
-max tokens/run, model tier ceiling (default sonnet; opus requires written justification), and a
-latency cap per run. No contract or budget, no agent.
+max tokens/run, model tier ceiling (default sonnet; `opus`/`fable` requires written justification),
+an `effort` ceiling, and a latency cap per run. No contract or budget, no agent.
+
+Dispatch note (honest mechanics): Agent-tool subagents run in the BACKGROUND by default — pass
+`run_in_background: false` when you need the result synchronously — and a subagent already spawned
+is continued with `SendMessage` (its context stays intact), which is cheaper and more accurate than
+relaunching it from scratch.
 
 ### 3. ASSIGN ROLE + TOOLS (least privilege)
 Enumerate ONLY the tools the role needs. A broad grant (e.g. Bash + Write + a write-connector)
@@ -65,9 +75,13 @@ on a read-only research agent is a security risk — flag and narrow it. Default
 |---|---|
 | Read/analyze code | Read, Grep, Glob |
 | Web research | WebSearch, WebFetch (or Exa MCP if configured) |
-| Write/refactor files | Read, Edit, Write |
+| Write/refactor files | Read, Edit, Write (+ `isolation: 'worktree'` whenever run in parallel) |
 | Run/verify | Bash (scoped commands), Read |
 | Irreversible (send/publish/trade/delete) | the connector + **mandatory human gate** (step 8) |
+
+Right-size `effort` per role in the same breath as tools: `effort:'low'` for mechanical/extraction
+roles, `effort:'high'|'max'` (and `model:'fable'` for the hardest ones) for verify/critic roles —
+capability where it gates, thrift everywhere else (Law 08).
 
 ### 4. TEST + VERIFY on an eval set (Law 05 — gate)
 Build a small eval set of 3–5 cases — typical inputs PLUS at least one adversarial/edge case
@@ -77,7 +91,8 @@ fabrication per Law 01? within the declared budget?). **Numeric gate — deploy 
 cases passing AND the adversarial case passing.** Record each run as evidence in the discipline
 format (Law 02).
 **Adversarial verification — the minter never grades its own output.** Dispatch a separate
-verifier subagent (read-only tools — Read, Grep) with the rubric + raw outputs; it returns
+verifier subagent (read-only tools — Read, Grep) at `model: 'fable'` + `effort: 'max'` — the seat
+that can BLOCK a deploy is the one place capability outranks cost — with the rubric + raw outputs; it returns
 pass/fail per case with quoted evidence, and a verifier fail overrides a minter self-pass.
 A failed gate BLOCKS deployment — fix prompt/tools and re-run the full eval set, or abandon.
 

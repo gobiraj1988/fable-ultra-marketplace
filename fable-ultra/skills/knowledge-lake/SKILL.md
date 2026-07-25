@@ -13,8 +13,16 @@ critique, `$FU` portable home) — do not restate it, follow it.
 
 ## 1. Storage layout
 Files live under `$FU\knowledge\<domain>\<object>.md`. `$FU` resolves per the discipline doctrine
-section 4 — env `FABLE_ULTRA_HOME`, else legacy `J:\fable 5\fable-ultra` if present, else
-`%USERPROFILE%\.fable-ultra`.
+section 4 — env `FABLE_ULTRA_HOME`, else the legacy home if present, else
+`%USERPROFILE%\.fable-ultra` on Windows / `$HOME/.fable-ultra` on Linux/macOS (§4 carries both the
+PowerShell 5.1-safe and the POSIX resolution; remote containers are Linux and have no PowerShell).
+
+**Durability (ephemeral containers).** On remote/web sessions the container's disk does NOT survive
+the session, so a lake written only to `$FU` is gone when the session ends. Anything that must
+persist has to be **committed** — push it to the repo with the GitHub MCP tools (`mcp__github__*`,
+e.g. `create_or_update_file` / `push_files`) before the session closes, respecting section 7
+privacy (never commit `# PRIVATE — local only` files to a shared remote). If the lake cannot be
+committed, say so — do not report a store as durable when it is not.
 
 | Domains | Object types (one file per type) |
 |---|---|
@@ -22,7 +30,7 @@ section 4 — env `FABLE_ULTRA_HOME`, else legacy `J:\fable 5\fable-ultra` if pr
 | qs, fidic, contracts, construction | patterns, benchmarks, lessons |
 | trading, programming, ai, ocr, rag, agents, business | failures, playbooks |
 
-Create the folder on first write (PowerShell): `New-Item -ItemType Directory -Force -Path "$FU\knowledge\qs"`.
+Create the folder on first write — PowerShell: `New-Item -ItemType Directory -Force -Path "$FU\knowledge\qs"` · POSIX: `mkdir -p "$FU/knowledge/qs"`.
 
 ## 2. Mandatory source attribution (Law 01)
 Every entry records a **source** and a **confidence**. No exceptions.
@@ -56,9 +64,10 @@ Added: YYYY-MM-DD   Domain: <domain>   Verify: VERIFIED|UNVERIFIED|REFUTED   Rel
 ```
 
 ## 4. Recall — how a task queries the lake
-1. **Targeted (default):** `Grep` by domain+object, then `Read` the hit. PowerShell example —
-   `Select-String -Path "$FU\knowledge\qs\rules.md" -Pattern 'retention|DLP'`
-   (prefer the Grep tool in-session; this is the shell equivalent).
+1. **Targeted (default):** `Grep` by domain+object, then `Read` the hit. Shell equivalents —
+   PowerShell: `Select-String -Path "$FU\knowledge\qs\rules.md" -Pattern 'retention|DLP'` ·
+   POSIX: `grep -nE 'retention|DLP' "$FU/knowledge/qs/rules.md"`
+   (prefer the Grep tool in-session; these are the shell fallbacks).
 2. **At scale:** for large lakes, hand the folder to `ai-builder` to build/query a vector index
    (RAG pipeline). Embeddings can run locally via **Ollama** (pick a current local embedding model
    from `ollama.com/library` at build time — model names go stale, don't copy one from memory) so no
@@ -101,6 +110,8 @@ Sensitive data (client names, rates, birth data, financials) **stays local** on 
 `knowledge/`. Do not send it to external web-search or hosted-embedding connectors; use local Grep
 and Ollama embeddings. If a task would export sensitive content off-machine, treat it as irreversible
 and get human approval first (Law 10). Mark such files with a top-of-file `# PRIVATE — local only`.
+This outranks the section 1 durability rule: a `# PRIVATE` file is never committed to a shared
+remote to survive an ephemeral container — report that it will not persist instead.
 
 ## 8. Verification & periodic audit (Law 05)
 Quarterly, or on demand, run an audit pass over `knowledge/**`. If the target file or web connector
@@ -108,12 +119,19 @@ does not exist yet (`knowledge/` is created on first write and starts empty), th
 STOP-and-report "nothing to audit" rather than erroring on the missing path (same PENDING-SOURCE
 discipline as Section 2). Otherwise:
 0. **Machine-validate first (executable audit).** Run this and record its output as the audit
-   evidence — counts, not eyeballing (PowerShell; `$FU` = resolved home):
+   evidence — counts, not eyeballing (`$FU` = resolved home; run the form your shell supports):
    ```powershell
    $md = Get-ChildItem "$FU\knowledge" -Recurse -Filter *.md
    "entries=$(($md|Select-String '^### ').Count) source=$(($md|Select-String 'Source:').Count)" +
    " conf=$(($md|Select-String 'Confidence:').Count) assumption=$(($md|Select-String 'ASSUMPTION').Count)" +
    " pending=$(($md|Select-String 'PENDING-SOURCE').Count)"
+   ```
+   ```sh
+   cd "$FU/knowledge" && echo "entries=$(grep -rho '^### ' --include='*.md' . | wc -l)" \
+     "source=$(grep -rho 'Source:' --include='*.md' . | wc -l)" \
+     "conf=$(grep -rho 'Confidence:' --include='*.md' . | wc -l)" \
+     "assumption=$(grep -rho 'ASSUMPTION' --include='*.md' . | wc -l)" \
+     "pending=$(grep -rho 'PENDING-SOURCE' --include='*.md' . | wc -l)"
    ```
    `entries > source` or `entries > conf` = that many malformed entries; locate and flag them
    (per-file diff of the same counts). Steps 1-4 below then work the flagged list.

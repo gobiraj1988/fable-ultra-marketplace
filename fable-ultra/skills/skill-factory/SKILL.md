@@ -7,7 +7,7 @@ description: The Skill Factory and Plugin Factory for fable-ultra V3 OMEGA (Syst
 
 Governed by `omega-constitution` (the 10 OMEGA Laws). The Laws win over any rule here: never fabricate, never claim done without verification (Law 05), evidence > confidence, verification > generation, reusable > temporary (Law 06), store lessons. This factory manufactures capability; it NEVER generates away a safety rail to make a task pass.
 
-The shared discipline contract `knowledge/ai/fable5-discipline.md` (plan-first, verify-by-execution evidence in the format `<command> -> exit <code> -> "<output>"`, independent critique, `$FU` portable home) applies to every stage below and is not restated here. `$FU` is the fable-ultra home, resolved per discipline doctrine section 4 — env `FABLE_ULTRA_HOME`, else legacy `J:\fable 5\fable-ultra` if present, else `%USERPROFILE%\.fable-ultra`.
+The shared discipline contract `knowledge/ai/fable5-discipline.md` (plan-first, verify-by-execution evidence in the format `<command> -> exit <code> -> "<output>"`, independent critique, `$FU` portable home) applies to every stage below and is not restated here. `$FU` is the fable-ultra home, resolved per discipline doctrine section 4 — env `FABLE_ULTRA_HOME`, else the legacy home if present, else `%USERPROFILE%\.fable-ultra` on Windows / `$HOME/.fable-ultra` on Linux/macOS. §4 gives both the PowerShell 5.1-safe and the POSIX resolution; run whichever matches this session's shell (remote containers are Linux and have no PowerShell), and prefer `CLAUDE_PLUGIN_ROOT` for reading plugin-shipped files when the harness sets it.
 
 ## 1. DETECT — recognize the missing-capability signal
 
@@ -39,8 +39,9 @@ Gate — interactive run: human approves the plan. Autonomous run: the structure
 2. **Choose a kebab-case `<name>`** and create `$FU\skills\<name>\SKILL.md`.
 3. **Write valid YAML frontmatter** — `---`, `name: <name>`, `description:` (one paragraph, packed
    with concrete trigger phrases, and noting if it defers to or differs from a similarly-named
-   existing skill), `---`. No tabs. Then a concrete, imperative, numbered body with tables — never
-   a vague essay.
+   existing skill), `---`. No tabs, no `: ` inside an unquoted description, and the description
+   must stay **<= 1024 characters** (see the section 7 length gates). Then a concrete, imperative,
+   numbered body with tables — never a vague essay.
 4. **Inherit the rails.** Every generated skill defers to `omega-constitution`, keeps human
    approval for irreversible actions, and states its required connectors + the STOP-and-report
    behavior when they are absent.
@@ -49,14 +50,14 @@ Gate — interactive run: human approves the plan. Autonomous run: the structure
 
 Never register an unverified skill. Run all four gates; prove each pass with execution evidence in the discipline format.
 
-1. **Frontmatter parses** — run the PowerShell snippet in section 7. Must print `OK`.
+1. **Frontmatter parses + fits the caps** — run the section 7 validator (POSIX or PowerShell form, whichever this session's shell supports). Must print `OK`; it also fails the over-length descriptions (1024 / 500).
 2. **Adversarial review** — spawn a structured-output subagent whose ONLY job is to REFUTE the draft against 2–3 realistic user scenarios (wrong triggers, impossible claims, faked connector output, missing rails, steps that cannot run). It must return findings as `{location, severity HIGH|MED|LOW, summary, failure_scenario}` plus an overall verdict PASS|FAIL — a prose-only review is invalid, re-run it. Fix every HIGH/MED finding. Budget ceiling — max 3 review-fix iterations; if HIGH findings persist after 3, STOP and report BLOCKED rather than looping.
 3. **Live smoke test** — exercise the skill on ONE real scenario, not just text review: invoke the new skill if already loadable, otherwise hand a FRESH subagent only the SKILL.md file plus the scenario and have it dry-run the steps. Pass = the subagent completes the scenario using only real mechanisms; any faked output or dead instruction fails the gate.
 4. **No impossible claims** — no literal-AGI/consciousness claims, no fabricated benchmarks, no "trains frontier models". Reject any such line before shipping.
 
 | Gate | Pass condition | On failure |
 |------|----------------|------------|
-| Parse | Snippet prints `OK` | Fix YAML, re-run |
+| Parse | Validator prints `OK` (incl. 1024/500 length caps) | Fix YAML or trim the description, re-run |
 | Adversarial | Verdict PASS, zero open HIGH/MED, within 3 iterations | Edit skill, re-review; BLOCKED after 3 |
 | Smoke | Fresh subagent completes the real scenario from the file alone | Fix the dead step, re-run |
 | Claims | Zero impossible/fabricated claims | Delete the claim, re-verify |
@@ -96,13 +97,32 @@ until the user authorizes the server (claude.ai connector settings, or `claude m
 
 Before declaring a skill DONE, confirm each: [ ] plan gated before drafting (section 2) ·
 [ ] `<name>` kebab-case, folder created · [ ] frontmatter parses (snippet below) ·
-[ ] description carries concrete trigger phrases and disambiguates from similar skills ·
+[ ] description carries concrete trigger phrases, disambiguates from similar skills, and is
+<= 1024 chars (plugin.json description <= 500) ·
 [ ] body is imperative, numbered, uses tables · [ ] every step maps to a real mechanism ·
 [ ] absent-connector steps STOP-and-report · [ ] reviewer verdict PASS within the 3-iteration budget ·
 [ ] live smoke test passed · [ ] no impossible/fabricated claims · [ ] rails intact ·
 [ ] plugin.json bumped · [ ] CHANGELOG appended · [ ] reload command given.
 
-PowerShell frontmatter validator (Windows) — set `$FU` per the discipline doctrine, section 4:
+Frontmatter validator — set `$FU` per the discipline doctrine, section 4. **Length gates it must
+enforce (real caps, not style advice):** SKILL.md `description:` <= **1024** chars ·
+`.claude-plugin/plugin.json` `description` <= **500** chars. Over-limit = fix before shipping.
+
+POSIX (any shell with python3 — this is the form that runs on remote Linux containers):
+
+```sh
+python3 - "$FU/skills/<name>/SKILL.md" <<'PY'
+import sys, yaml
+fm = open(sys.argv[1], encoding='utf-8').read().split('---', 2)[1]
+assert '\t' not in fm, 'Tab in frontmatter'
+d = yaml.safe_load(fm)
+assert d.get('name') and d.get('description'), 'Missing name/description'
+assert len(str(d['description'])) <= 1024, 'description over 1024 chars'
+print('OK')
+PY
+```
+
+PowerShell equivalent (Windows; 5.1-safe — no `??`):
 
 ```powershell
 $p = "$FU\skills\<name>\SKILL.md"
@@ -112,7 +132,15 @@ $fm = $Matches[1]
 if ($fm -match "`t") { Write-Error "Tab in frontmatter"; exit 1 }
 if ($fm -notmatch "(?m)^name:\s*\S")        { Write-Error "Missing name"; exit 1 }
 if ($fm -notmatch "(?m)^description:\s*\S") { Write-Error "Missing description"; exit 1 }
+$desc = ([regex]::Match($fm, "(?ms)^description:\s*(.+?)(?=^\w+:|\z)")).Groups[1].Value.Trim()
+if ($desc.Length -gt 1024) { Write-Error "description over 1024 chars ($($desc.Length))"; exit 1 }
 Write-Output "OK"
+```
+
+And the plugin manifest cap (either shell):
+
+```sh
+python3 -c "import json,sys; d=json.load(open('$FU/.claude-plugin/plugin.json')); n=len(d.get('description','')); sys.exit(('plugin.json description over 500 chars: %d' % n) if n>500 else 0)" && echo OK
 ```
 
 ## 8. Safety rails — never generate them away

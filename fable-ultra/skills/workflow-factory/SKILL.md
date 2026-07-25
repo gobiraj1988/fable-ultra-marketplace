@@ -17,7 +17,7 @@ and the `$FU` portable home. `$FU` resolves per its section 4 (env `FABLE_ULTRA_
 `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`). Resolve it per-platform, never
 PowerShell-only — PowerShell:
 `$FU = if ($env:FABLE_ULTRA_HOME) { $env:FABLE_ULTRA_HOME } elseif (Test-Path 'J:\fable 5\fable-ultra') { 'J:\fable 5\fable-ultra' } else { Join-Path $env:USERPROFILE '.fable-ultra' }`
-(PS 5.1-safe: `if/else`, never the `??` operator); POSIX (Linux/macOS, incl. remote containers):
+(PS 5.1-safe: use `if/else`, never the PS7-only null-coalescing operator); POSIX (Linux/macOS, incl. remote containers):
 `FU="${FABLE_ULTRA_HOME:-${CLAUDE_PLUGIN_ROOT:-$HOME/.fable-ultra}}"`.
 
 ## 1. Template categories (each = one parameterized Workflow script)
@@ -98,7 +98,7 @@ a recorded PASS does not enter INDEX.md. Reuses `$body` from the wrapper step ab
 # The `workflow` stub is REQUIRED (equivalently `global.workflow = async () => ({})`): a template
 # that nests one level via `workflow(name, args)` would otherwise DRY-RUN FAIL on an undefined
 # global and be falsely rejected by the gate.
-$stubs = 'const agent=async()=>({passes:true,defects:[],workItems:[],newWorkItems:[]});const pipeline=async()=>[];const parallel=async(t)=>Promise.all(t.map(f=>f()));const workflow=async()=>({});const phase=()=>{};const log=()=>{};const budget={total:0,remaining:()=>1e9};const args={goal:"dry-run",maxIterations:1};'
+$stubs = 'const agent=async()=>({passes:true,defects:[],workItems:[],newWorkItems:[]});const pipeline=async()=>[];const parallel=async(t)=>Promise.all(t.map(f=>f()));const workflow=async()=>({});const phase=()=>{};const log=()=>{};const budget={total:0,spent:()=>0,remaining:()=>1e9};const args={goal:"dry-run",maxIterations:1};'
 $guard = 'const t=setTimeout(()=>{console.log("DRY-RUN FAIL - hang");process.exit(1)},30000);__wf().then(()=>{clearTimeout(t);console.log("DRY-RUN PASS")}).catch(e=>{console.log("DRY-RUN FAIL - "+e.message);process.exit(1)});'
 $run = Join-Path $env:TEMP 'wf-dryrun.mjs'
 ($stubs + "`nasync function __wf(){`n" + $body + "`n}`n" + $guard) | Out-File -Encoding utf8 $run
@@ -108,11 +108,19 @@ node $run
 POSIX equivalent (Linux/macOS, incl. remote containers) — same stubs, same guard, same PASS/FAIL line:
 
 ```bash
+# STUBS/GUARD must be defined HERE — they are shell variables, not inherited from the
+# PowerShell block above. `budget.spent()` is stubbed too: without it, any template that
+# reports spend (legal, and required by governance-core) is falsely rejected by the gate.
+STUBS='const agent=async()=>({passes:true,defects:[],workItems:[],newWorkItems:[]});const pipeline=async()=>[];const parallel=async(t)=>Promise.all(t.map(f=>f()));const workflow=async()=>({});const phase=()=>{};const log=()=>{};const budget={total:0,spent:()=>0,remaining:()=>1e9};const args={goal:"dry-run",maxIterations:1};'
+GUARD='const t=setTimeout(()=>{console.log("DRY-RUN FAIL - hang");process.exit(1)},30000);__wf().then(()=>{clearTimeout(t);console.log("DRY-RUN PASS")}).catch(e=>{console.log("DRY-RUN FAIL - "+e.message);process.exit(1)});'
 # strip the meta block with Node (portable, same singleline-aware regex as above)
 node -e 'const fs=require("fs");fs.writeFileSync("/tmp/wf-body.js",fs.readFileSync(process.argv[1],"utf8").replace(/export\s+const\s+meta[\s\S]*?\n\}/,""))' "$FU/workflows/research-pipeline.js"
 { printf '%s\n' "$STUBS"; echo 'async function __wf(){'; cat /tmp/wf-body.js; echo '}'; printf '%s\n' "$GUARD"; } > /tmp/wf-dryrun.mjs
 node /tmp/wf-dryrun.mjs
 ```
+
+A silent exit 0 with NO `DRY-RUN PASS` line is itself a FAIL — it means the stubs or guard never
+ran. Gate on the printed line, never on the exit code alone.
 
 Record both results as discipline-contract evidence, e.g. `node $run -> exit 0 -> "DRY-RUN PASS"`.
 

@@ -7,7 +7,8 @@ description: The standing operating doctrine of fable-ultra as a practical AI Op
 
 **Mission:** continuously evolve into the strongest PRACTICAL AI operating system with MAXIMUM
 REUSE and MINIMUM token cost. Not AGI — a reusable, verifiable build system. Any model
-(Sonnet / Opus / Haiku / local) is an interchangeable reasoning engine; never depend on one.
+(Fable 5 / Opus 4.8 / Sonnet 5 / Haiku 4.5 / local) is an interchangeable reasoning engine;
+never depend on one.
 
 ## Rule -> enforcing skill (the map)
 
@@ -16,7 +17,7 @@ REUSE and MINIMUM token cost. Not AGI — a reusable, verifiable build system. A
 | TOKEN | search first; retrieve only relevant context; never dump whole knowledge bases | `knowledge-lake` (targeted Grep/RAG) + `ultra-code` (scoped reads) |
 | TOKEN | cache aggressively; reuse prior results | Workflow `resumeFromRunId` + `workflow-factory` templates |
 | TOKEN | store every lesson permanently | `memory/lessons.md` + `knowledge-lake` |
-| ROUTING | simple -> cheapest capable model; complex -> strongest; verify -> independent verifier | `model-router` + `model-max` |
+| ROUTING | route BOTH dials — tier (`haiku`/`sonnet`/`opus`/`fable`) AND reasoning `effort` (`low`→`max`): simple -> cheapest tier at low effort; complex -> stronger tier; verify -> independent verifier at high+ effort. Raise effort before hopping a tier | `model-router` + `model-max` |
 | TIER-CALIBRATION | match the discipline countermeasure to the tier's characteristic failure (discipline §0) | `model-max` step 0 + `model-router` overhead table |
 | KNOWLEDGE | store every success, failure, lesson, benchmark, reusable workflow (with source) | `knowledge-lake` |
 | RESEARCH | research before coding; verify before claiming; benchmark before promoting; reject unsupported | `research-council` + `algorithm-factory` + omega-constitution Laws 2/5 |
@@ -33,7 +34,9 @@ Doctrine claims are proven by execution, never asserted — run the test suite a
 before declaring anything **Verified**, recording `<command> -> exit <code> -> "<output>"`. The
 full discipline contract (plan-first, evidence format, independent critique, $FU portable home)
 is `$FU\knowledge\ai\fable5-discipline.md`; `$FU` resolves per its section 4 (env
-`FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`).
+`FABLE_ULTRA_HOME` -> legacy home if present -> `%USERPROFILE%\.fable-ultra` on Windows,
+`$HOME/.fable-ultra` on Linux/macOS — §4 carries both the PowerShell and the POSIX resolution,
+and prefers `CLAUDE_PLUGIN_ROOT` for reading plugin-shipped files when the harness sets it).
 
 ## OS failure modes (rule for each)
 
@@ -52,7 +55,9 @@ is `$FU\knowledge\ai\fable5-discipline.md`; `$FU` resolves per its section 4 (en
 4. Route by size — SMALL/KNOWN (≤3 files, known pattern) -> direct edit, ≤20k tokens total.
    WORKFLOW-WORTHY (≥4 files or genuine parallel/adversarial-verify need) -> per-stage budgets
    of PLAN ≤30k, BUILD ≤150k/stage, VERIFY ≤50k, REVIEW ≤50k; a stage exceeding 2x its budget
-   stops and re-scopes (a full workflow costs 100k–900k tokens — spend it deliberately).
+   stops and re-scopes. Do NOT quote a remembered total for "what a workflow costs" — read the
+   live `budget` global inside the run (`budget.total`, `budget.spent()`, `budget.remaining()`)
+   and report from that; it is the only honest number and it is a hard ceiling.
 5. Cache: resume workflows; reuse `workflow-factory` templates instead of re-authoring.
 6. After the task, append ONE lesson; promote any reusable artifact to a template or skill.
 

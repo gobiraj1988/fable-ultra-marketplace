@@ -14,6 +14,9 @@ Process discipline (plan-first, verify-by-execution evidence format `<command> -
 independent critique, the `$FU` portable home) follows the shared contract in
 `knowledge/ai/fable5-discipline.md` — apply it, do not restate it. `$FU` resolves per its doctrine
 section 4 (env `FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`).
+PowerShell (5.1-safe — use `if/else`, never the PS7-only null-coalescing operator):
+`$FU = if ($env:FABLE_ULTRA_HOME) { $env:FABLE_ULTRA_HOME } elseif (Test-Path 'J:\fable 5\fable-ultra') { 'J:\fable 5\fable-ultra' } else { Join-Path $env:USERPROFILE '.fable-ultra' }`.
+POSIX (Linux/macOS, incl. remote containers): `FU="${FABLE_ULTRA_HOME:-${CLAUDE_PLUGIN_ROOT:-$HOME/.fable-ultra}}"`.
 
 ## 1. Monitoring (System S)
 
@@ -36,6 +39,16 @@ $last = Get-Content "$FU\memory\metrics.md" -Tail 1
 if (($last -split '\|').Count -ne 13) { throw "metrics.md row malformed - repair before claiming logged" }
 ```
 
+POSIX equivalent (same sanitize, same append, same read-back check — the row is not "logged" until
+the check passes):
+
+```bash
+san() { printf '%s' "$1" | tr -d '\r\n' | tr '|' '\\'; }
+row="| $(date -u +%Y-%m-%dT%H:%M:%S) | $(san "$rid") | $(san "$agent") | $(san "$skill") | $(san "$model") | quality:$q | speed_s:$sp | cost_usd:$c | accuracy:$a | fail_rate:$f | notes:$(san "$n") |"
+printf '%s\n' "$row" >> "$FU/memory/metrics.md"
+[ "$(tail -1 "$FU/memory/metrics.md" | awk -F'|' '{print NF}')" = "13" ] || echo "metrics.md row malformed - repair before claiming logged"
+```
+
 Only after the read-back check passes may you report the row as logged, citing the check itself as
 evidence in the discipline format.
 
@@ -47,10 +60,11 @@ does not edit skills itself.
 
 ## 2. Autonomy Engine (System O)
 
-Run long work as background Tasks (`TaskCreate` / `TaskGet` / `TaskList` / `TaskStop`) or scheduled
-agents (the `schedule` skill, or `CronCreate` / `mcp__scheduled-tasks__create_scheduled_task` if
-available — if none is present, say so and STOP; do not fake a schedule). Track goal + progress in a
-run-state file so work survives context resets:
+Run long work as background Tasks (`TaskCreate` / `TaskUpdate` / `TaskGet` / `TaskList` /
+`TaskOutput` / `TaskStop`) or scheduled agents (the `schedule` skill, or the real `CronCreate` /
+`CronList` / `CronDelete`, `ScheduleWakeup`, `Monitor` tools if available — if none is present, say so
+and STOP; do not fake a schedule, and do not name a scheduling tool you have not seen in this
+session). Track goal + progress in a run-state file so work survives context resets:
 
 ```
 # run-state.md
@@ -60,10 +74,14 @@ PROGRESS: step 4/12 — <what is done, what remains>
 LAST_RUN_ID: <id>   NEXT_ACTION: <concrete>
 ```
 
-Recover a crashed/paused run by reading run-state.md and **starting a fresh** Task (`TaskCreate`) or
-scheduled agent, seeded with `GOAL` + `LAST_RUN_ID` + `NEXT_ACTION` so it continues where it stopped.
-(If a native resume-by-run-id tool is ever connected, use it; otherwise START A NEW RUN from
-run-state.md — never assume a resume capability that is not present.)
+Recovery, cheapest path first:
+- A Workflow run resumes NATIVELY — `Workflow({scriptPath, resumeFromRunId})` with `LAST_RUN_ID` from
+  run-state.md replays cached results for the unchanged `agent()` prefix (from that run's
+  `journal.jsonl`), so only changed/new stages re-run. Resume EXISTS; use it before relaunching.
+- A background agent that is still alive needs no relaunch at all — steer it with `SendMessage`
+  (its context stays intact) and re-check with `TaskOutput`; keep its record current via `TaskUpdate`.
+- Only for non-Workflow work with no live agent do you **start fresh** (`TaskCreate`) or re-schedule,
+  seeded with `GOAL` + `LAST_RUN_ID` + `NEXT_ACTION` so it continues where it stopped.
 
 **Done-condition contract.** `GOAL` must be measurable and paired with a named evidence artifact,
 recorded in run-state.md as `DONE_EVIDENCE`. Example — GOAL "all qs-works regression tests pass";
@@ -127,8 +145,9 @@ When `ultra-code` is running, read its `ultra-code-run.md` (progress log) on an 
 - fail_rate in metrics.md rises run-over-run, or cost/wall exceeds the budget guard.
 
 On a stall: record it in metrics.md (`notes:stall`), append a lesson, and either pause for the human
-or, if recovery is safe, relaunch a fresh Task from run-state.md's `LAST_RUN_ID` + `NEXT_ACTION` (see
-System O). Do not silently retry more than once.
+or, if recovery is safe, recover by the System O order — `SendMessage` to steer the live agent, else
+`Workflow({scriptPath, resumeFromRunId})` with `LAST_RUN_ID`, and only then a fresh Task seeded with
+`NEXT_ACTION`. Do not silently retry more than once.
 
 ## 5. Honest limits
 

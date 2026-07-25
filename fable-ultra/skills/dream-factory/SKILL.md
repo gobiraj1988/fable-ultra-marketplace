@@ -11,7 +11,9 @@ Read `memory/lessons.md` at start; append a lesson at end.
 Shared discipline contract — `$FU\knowledge\ai\fable5-discipline.md` (plan-first, evidence
 format `<command> -> exit <code> -> "<output>"`, independent critique, portable $FU home)
 applies to every stage; do not restate it, follow it. `$FU` resolves per discipline doctrine
-section 4 - env `FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`.
+section 4 - env `FABLE_ULTRA_HOME` -> legacy home if present -> `%USERPROFILE%\.fable-ultra` on
+Windows / `$HOME/.fable-ultra` on Linux/macOS; §4 carries both the PowerShell 5.1-safe and the
+POSIX resolution, so run the one this session's shell supports.
 
 ## Non-negotiables (Laws 01/03/10)
 - **No fabricated figures.** Every TAM, market size, growth rate, competitor stat, or pricing
@@ -82,14 +84,19 @@ Delegated gates do not discharge this stage. Before declaring Stage 2 done, run 
 each check in the discipline evidence format `<command> -> exit <code> -> "<output>"`:
 1. **Tests:** run the built product's test command (e.g. `pytest -q` / `npm test`) yourself;
    exit 0 required.
-2. **Plan loads:** `Get-Content .\business\plan\BUSINESS_PLAN.md | Measure-Object -Line` — file
-   exists, non-empty, all 10 CHECKPOINT lines present.
-3. **Citations resolve:** extract every URL cited in the plan and `WebFetch` (or
-   `Invoke-WebRequest -Method Head`) each; any dead/unreachable citation is re-sourced or
-   demoted to `ASSUMPTION (unvalidated)` before proceeding.
+2. **Plan loads:** `Get-Content .\business\plan\BUSINESS_PLAN.md | Measure-Object -Line`
+   (PowerShell) or `wc -l business/plan/BUSINESS_PLAN.md` (POSIX) — file exists, non-empty,
+   all 10 CHECKPOINT lines present.
+3. **Citations resolve:** extract every URL cited in the plan and `WebFetch` each (load its schema
+   via `ToolSearch` first; `curl -sI <url>` / `Invoke-WebRequest -Method Head` is the shell
+   fallback); any dead/unreachable citation is re-sourced or demoted to
+   `ASSUMPTION (unvalidated)` before proceeding.
 A failed check = Stage 2 NOT done; report the failing evidence line, do not paraphrase it away.
 
 ### Stage 3 — OPERATE (measure -> improve -> scale)
+Track the execution plan with the task tools (`TaskCreate` / `TaskUpdate` / `TaskList`); schedule
+recurring ops and reports with `CronCreate` (+ `CronList` / `CronDelete`) or `ScheduleWakeup`, and
+watch a long-running condition with `Monitor` instead of busy-waiting.
 1. **Measure:** stand up the analytics plan; wire the metrics the plan named (activation,
    retention, CAC/LTV as *tracked* values, never invented). Route the metrics loop through
    `meta-brain`; if a real analytics/data connector is required and none is connected, STOP and
@@ -108,17 +115,28 @@ A failed check = Stage 2 NOT done; report the failing evidence line, do not para
   stage's budget.
 
 ## Real mechanisms only (Law 01)
-- Research: `WebSearch`/`WebFetch`; `research-council` when present (if absent, say so and
-  fall back). Grounded facts come from here.
+- Research: built-in `WebSearch` / `WebFetch` — these are **deferred tools**, so load their
+  schemas via `ToolSearch` (e.g. `select:WebSearch,WebFetch`) before calling them; `research-council`
+  when present (if absent, say so and fall back to WebSearch/WebFetch directly). Grounded facts
+  come from here.
 - Build/orchestrate: the sibling SKILLs above + `ultra-code`; subagents via `agent-factory`.
-- Automation/data: MCP connectors (GitHub, Notion/Linear/Asana, analytics); Ollama for cheap
-  drafting. Absent connector/API = STOP-and-report the gap — never simulate its output.
-- Scheduling (recurring ops/reports): Workflow / scheduled-task tools when connected.
+- Automation/data: MCP connectors (GitHub via `mcp__github__*`, Notion/Linear/Asana, analytics);
+  Ollama for cheap drafting (not present on ephemeral remote containers). Absent connector/API =
+  STOP-and-report the gap — never simulate its output.
+- Plans and progress: `TaskCreate` / `TaskUpdate` / `TaskList` (with `TaskGet` / `TaskOutput` /
+  `TaskStop` for background work).
+- Scheduling (recurring ops/reports): `CronCreate` / `CronList` / `CronDelete` for schedules,
+  `ScheduleWakeup` for a one-off resume, `Monitor` for watch-until conditions, and the Workflow
+  tool for multi-stage runs. There is no `mcp__scheduled-tasks__*` tool — do not reach for one.
 
-## PowerShell (Windows-friendly)
+## Scaffold (run the form your shell supports)
 ```powershell
 'plan','build','marketing','ops','analytics' | ForEach-Object { New-Item -ItemType Directory -Force -Path ".\business\$_" | Out-Null }
 Set-Content -Encoding utf8 .\business\plan\BUSINESS_PLAN.md "# Business Plan`n"
+```
+```sh
+mkdir -p business/plan business/build business/marketing business/ops business/analytics
+printf '# Business Plan\n' > business/plan/BUSINESS_PLAN.md
 ```
 
 ## FINAL DELIVERABLE (per omega-constitution — required)

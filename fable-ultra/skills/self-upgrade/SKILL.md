@@ -9,7 +9,7 @@ Self-modification here means one concrete mechanism: this plugin edits its own S
 Never claim consciousness, general intelligence, or capabilities beyond editing these files.
 
 Process discipline follows the shared contract in `knowledge/ai/fable5-discipline.md` (plan-first, verify-by-execution evidence format `<command> -> exit <code> -> "<output>"`, independent critique, `$FU` portable home) — apply it, don't restate it.
-`$FU` below is the plugin home, resolved per the discipline doctrine section 4 (env `FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`).
+`$FU` below is the plugin home, resolved per the discipline doctrine section 4 (env `FABLE_ULTRA_HOME` -> legacy home if present -> `%USERPROFILE%\.fable-ultra` on Windows / `$HOME/.fable-ultra` on Linux/macOS). §4 carries both the PowerShell 5.1-safe and the POSIX resolution — run the one that matches this session's shell, and prefer `CLAUDE_PLUGIN_ROOT` for locating the plugin-shipped skill files when the harness sets it. Every snippet below is shown in PowerShell with the POSIX equivalent beside it; on remote Linux containers use the POSIX form.
 
 ## The Upgrade Loop (mandatory order — do not skip or reorder steps)
 
@@ -21,15 +21,22 @@ Process discipline follows the shared contract in `knowledge/ai/fable5-disciplin
    # $TARGET resolved per step 3 (a SKILL.md, or the discipline overlay file)
    Copy-Item "$TARGET" "$FU\memory\upgrade-backups\<slug>.bak.md" -Force
    ```
+   ```sh
+   mkdir -p "$FU/memory/upgrade-backups"
+   cp -f "$TARGET" "$FU/memory/upgrade-backups/<slug>.bak.md"
+   ```
    where `<slug>` identifies the target (e.g. `ultra-code.SKILL` or `fable5-discipline`).
 4. **Propose ONE focused edit** — a sharper trigger phrase, a better checklist item, a new countermeasure for an observed failure, or a refined tier row in the overlay table. Small diff (a few lines), never a rewrite. State the edit and the evidence line that justifies it. Then **consult governance-core** (self-modification is a gated action) — apply only on ALLOW; on BLOCK or NEEDS-APPROVAL stop, restore nothing (nothing applied yet), and report the verdict.
 5. **Test — adversarial, blind.**
-   - Validate the YAML frontmatter still parses (`---` fences intact, `name:` and `description:` present, no tabs, no colon+space inside the description value).
+   - Validate the YAML frontmatter still parses (`---` fences intact, `name:` and `description:` present, no tabs, no colon+space inside an unquoted description value, `description` <= 1024 chars) — use the `skill-factory` section 7 validator, which has both a POSIX and a PowerShell form.
    - Before/after eval on 3 realistic scenarios drawn from the evidence. For each scenario, dispatch one structured-output subagent per version (OLD and NEW skill text) to produce the instructions each version would give. Randomize labels per scenario ("Version A"/"Version B") and pass both outputs to a separate blind judge subagent that is NOT told which is old vs new; the judge returns structured `{winner, reason}`. Unblind only after all 3 verdicts are in and record them.
 6. **Keep only if the new version wins** (2 of 3 or better). Otherwise restore the backup and append the reason it lost to `lessons.md`:
    ```powershell
    # $TARGET resolved in step 3; <slug>.bak.md written in step 3
    Copy-Item "$FU\memory\upgrade-backups\<slug>.bak.md" "$TARGET" -Force
+   ```
+   ```sh
+   cp -f "$FU/memory/upgrade-backups/<slug>.bak.md" "$TARGET"
    ```
 7. **Version bump.** Edit `$FU\.claude-plugin\plugin.json`: patch bump (x.y.Z+1) for tweaks, minor bump (x.Y+1.0) for a new capability. Append a dated entry to `$FU\CHANGELOG.md` describing the edit and the eval result.
 8. **Tell the user to reload:** `claude plugin update fable-ultra@fable-ultra-marketplace` (the marketplace-qualified name is required — the bare name fails with "not found").

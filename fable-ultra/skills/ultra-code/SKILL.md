@@ -93,23 +93,37 @@ failing dependency), STOP and report exactly what the user must provide — neve
   Use `parallel()` barriers ONLY when a stage genuinely needs all prior results (dedup, early-exit).
 - Use `schema` on every `agent()` call that returns data — structured output, no parse overhead.
 - Use `resumeFromRunId` when re-running after an edit: unchanged agent() calls return cached
-  results instantly (~100% cache hit for identical prefix).
+  results instantly (~100% cache hit for identical prefix). `journal.jsonl` in the run's
+  transcript dir records each agent's actual return value — read it before diagnosing a weird
+  result, instead of re-running the whole pipeline to see what a stage returned.
 - Budget-aware loops: when the user sets a token target, guard with
-  `while (budget.total && budget.remaining() > 50_000)`. Without a target, use the iteration
+  `while (budget.total && budget.remaining() > 50_000)`, and log `budget.spent()` once per
+  iteration so the ceiling never arrives as a surprise. Without a target, use the iteration
   ceiling instead — never an unguarded `while (true)`.
-- Route models AND effort per stage (see `model-router`): cheap tiers + `effort: 'low'` for
-  mechanical stages, premium tiers + high effort only for verify/judge stages. Omit `model:` to
-  inherit the session model when unsure.
-- Saved pipelines can run as sub-steps via `workflow(nameOrRef, args)` (one nesting level) —
-  reuse `workflow-factory` templates instead of re-authoring stages.
+- Route BOTH quality dials per stage (see `model-router`): `model` (`'haiku'|'sonnet'|'opus'|
+  'fable'`) AND `effort` (`'low'|'medium'|'high'|'xhigh'|'max'`). Mechanical BUILD items run cheap
+  at `effort: 'low'`; PLAN/VERIFY/REVIEW get `'high'` or better (ceiling: `model: 'fable'` at
+  `effort: 'max'`). Omit `model:` to inherit the session model when unsure.
+- When parallel BUILD items mutate the SAME files, give those agents `isolation: 'worktree'`
+  (a fresh git worktree each — expensive, so only when they would genuinely conflict).
+- Reuse registered subagent types via `agentType` instead of re-describing the same role in a
+  prompt every stage.
+- Saved pipelines can run as sub-steps via `workflow(nameOrRef, args)` — **one level of nesting
+  only**; reuse `workflow-factory` templates instead of re-authoring stages.
+- Determinism: `Date.now()`, `Math.random()`, and argless `new Date()` THROW inside a workflow
+  script (they would break resume replay) — pass timestamps and seeds in through `args`.
+- Fan-out caps: 4096 items per `pipeline()`/`parallel()` call, ~16 concurrent agents
+  (`min(16, cores-2)`), 1000 agents per run lifetime. Chunk anything larger; a run that would
+  exceed the lifetime cap needs re-scoping, not a bigger loop.
 - A reference workflow script lives at `scripts/ultra-code-workflow.js` in this skill — adapt its
   stage prompts and schemas to the actual task; don't run it verbatim. If it is missing in this
   install, author the script fresh from the stage model above.
 
 ## Token-efficiency engine
 
-- **Cache-aware pacing**: the prompt cache TTL is ~5 minutes. When polling external state, poll
-  inside the window (≤270s) or commit to a long sleep (1200s+); never ~300s (worst of both).
+- **Pacing**: don't pace off a remembered cache TTL (it varies by surface) — match the wait to
+  what you are actually waiting for. One ~480s check beats eight 60s polls for an ~8-minute CI
+  run; use 1200s+ fallback heartbeats when something else is the real wake signal.
 - **Scoped reads**: read only the lines you need from large files; never re-read a file you just
   edited (Edit/Write already errored if it failed).
 - **Delegate bulk search**: fan file-sweeps out to Explore/general-purpose subagents so the main
@@ -119,8 +133,8 @@ failing dependency), STOP and report exactly what the user must provide — neve
 
 ## Continuous operation
 
-- Within a session: `/loop` with self-pacing (ScheduleWakeup) keeps iterating; pick delays by
-  cache windows, with 1200s+ fallback heartbeats for untracked work.
+- Within a session: `/loop` with self-pacing (ScheduleWakeup) keeps iterating; size each delay to
+  the thing being waited on, with 1200s+ fallback heartbeats for untracked work.
 - Across sessions: offer the `schedule` skill (cron cloud agents) for recurring runs.
 - Long builds: background Tasks + notification on completion; never busy-wait.
 

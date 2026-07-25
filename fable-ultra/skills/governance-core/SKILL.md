@@ -14,14 +14,16 @@ Shared discipline contract — `knowledge/ai/fable5-discipline.md` applies here 
 verify-by-execution evidence in the form `<command> -> exit <code> -> "<output>"`, independent
 critique, `$FU` portable home); do not restate it, follow it.
 `$FU` = the fable-ultra home, resolved per the discipline doctrine section 4
-(env `FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`).
+(env `FABLE_ULTRA_HOME` -> legacy `J:\fable 5\fable-ultra` if present -> `%USERPROFILE%\.fable-ultra`);
+on Linux/macOS (incl. remote containers) resolve it POSIX-style instead:
+`FU="${FABLE_ULTRA_HOME:-${CLAUDE_PLUGIN_ROOT:-$HOME/.fable-ultra}}"`.
 
 ## 1. Classify the action, then gate it
 
 | Class | Examples | Gate |
 |-------|----------|------|
 | **irreversible** | delete/overwrite files, send/publish/post, live trade, money movement, external-account change | **NEEDS-APPROVAL** — explicit per-action human OK (X-LAW 09/10) |
-| **expensive** | large multi-agent Workflow, paid-API calls, long paid-model runs | budget check + written cost ESTIMATE first (§3) |
+| **expensive** | large multi-agent Workflow, paid-API calls, long paid-model runs, `isolation:'worktree'` runs (each worktree is a full extra agent tree), `model:'fable'`-tier runs (top tier, top price), and `effort:'high'`/`'max'` agents (effort multiplies tokens on the SAME model) | budget check + written cost ESTIMATE first (§3) |
 | **risky** | security-affecting, data-exposing, credential-touching | risk assessment first (§5) |
 | **routine** | read-only, local scratch edits, analysis with no external effect | ALLOW |
 
@@ -68,10 +70,26 @@ Add-Content $led "| $date | multi-agent run (ESTIMATE) | 1.20 | 4.80 | 20.00 |" 
 output as the EVIDENCE line of the section-2 block, in the discipline evidence format
 `<command> -> exit <code> -> "<output>"`. No executed output, no ALLOW.**
 
+Inside a live Workflow run the ledger is the DURABLE record but not the live enforcer: the `budget`
+global (`{ total, spent(), remaining() }`) is the in-run hard ceiling — `agent()` THROWS once it is
+exhausted, so a runaway pipeline stops itself mid-run. Gate an expensive Workflow on both: the
+ledger hard-stop below before launch, and a `budget.total` set from that same estimate at launch
+(templates also carry `if (budget.total && budget.remaining() < 50000) break`). A run launched with
+no `budget.total` is ungoverned — return **BLOCK**.
+
 The check RECOMPUTES the total from every est-cost row — it never trusts the last row's
 manually-written running-total, because one arithmetic or formatting slip by a caller would
 silently defeat the limit. On drift between stated and recomputed, the recomputed value wins
 and the drift is reported (and audited, section 4).
+
+POSIX equivalent for the ledger append above (Linux/macOS, incl. remote containers):
+
+```bash
+FU="${FABLE_ULTRA_HOME:-${CLAUDE_PLUGIN_ROOT:-$HOME/.fable-ultra}}"; dir="$FU/governance"; mkdir -p "$dir"
+led="$dir/budget.md"
+[ -f "$led" ] || printf '| date | item | est-cost | running-total | limit |\n| --- | --- | --- | --- | --- |\n' > "$led"
+echo "| $(date -u +'%Y-%m-%d %H:%M') | multi-agent run (ESTIMATE) | 1.20 | 4.80 | 20.00 |" >> "$led"
+```
 
 ```powershell
 $rows  = Get-Content $led | Select-Object -Skip 2 | Where-Object { $_.Trim() }
@@ -98,6 +116,14 @@ $aud = Join-Path $dir "audit.md"
 if (-not (Test-Path $aud)) { "| timestamp | action | decision | reason | approver |","| --- | --- | --- | --- | --- |" | Set-Content $aud -Encoding UTF8 }
 $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 Add-Content $aud "| $ts | live trade AAPL | NEEDS-APPROVAL | irreversible money movement | pending |" -Encoding UTF8
+```
+
+POSIX equivalent:
+
+```bash
+dir="$FU/governance"; mkdir -p "$dir"; aud="$dir/audit.md"
+[ -f "$aud" ] || printf '| timestamp | action | decision | reason | approver |\n| --- | --- | --- | --- | --- |\n' > "$aud"
+echo "| $(date -u +'%Y-%m-%d %H:%M:%S') | live trade AAPL | NEEDS-APPROVAL | irreversible money movement | pending |" >> "$aud"
 ```
 
 ## 5. Compliance checklist per domain
@@ -127,6 +153,9 @@ audit it (section 4), and alert the human.
 ```powershell
 (Get-FileHash "$PSScriptRoot\SKILL.md" -Algorithm SHA256).Hash  # compare to $FU\governance\skill-hash.txt
 ```
+
+POSIX equivalent: `sha256sum "$(dirname "$0")/SKILL.md"` (or `shasum -a 256` on macOS) — compare to
+`$FU/governance/skill-hash.txt`.
 
 ## 7. How other skills invoke this gate
 

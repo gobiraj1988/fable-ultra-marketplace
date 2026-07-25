@@ -26,9 +26,12 @@ current model tiers, the portable fable-ultra home (`$FU`), and orchestration de
    # Example: verify, don't assume
    python .\script.py; if ($LASTEXITCODE -ne 0) { "ITEM FAILED - fix before next item" }
    ```
-5. **Adversarial critique pass.** After all items: the reviewer must be **independent** of the builder — spawn a fresh-context verifier subagent (Agent tool or a Workflow `agent()` with a structured verdict schema), give it the goal + the diff but NOT the builder's reasoning, prompt it to REFUTE the work, and default to fail when uncertain. Independence is the point: a verifier that read the builder's own thinking is no longer independent. When a subagent is genuinely unavailable, fall back to self-critique: find at least 3 concrete flaws and fix them, repeating until a pass finds zero real flaws. Maximum 3 passes either way — do not pad passes with fake flaws to hit the count; "concrete" means reproducible or pointable-to. **Opus overlay:** "this reasoning is clearly right" is not evidence — re-run it. **Sonnet/Haiku overlay:** the verifier subagent should run at a stronger tier than the builder where affordable (verify is the high-leverage stage).
-6. **Done = evidence — fresh this turn.** Declare done ONLY when the step-1 done-condition is met AND you quote the execution evidence (command output, exit code, rendered result) **from a run executed in this turn**. A result remembered from an earlier iteration is a premature-done and is rejected (discipline §5).
-7. **Honest stop rule.** If the same defect survives 2 fix attempts, STOP. Tell the user plainly: "This task may need a stronger model. What failed: <specific defect and what was tried>." Hand the escalation decision to `model-router` (escalate ONE tier on a real signal only). Never fake success, never silently narrow scope to dodge the failure.
+   ```sh
+   python3 ./script.py || echo "ITEM FAILED - fix before next item"
+   ```
+5. **Adversarial critique pass.** After all items: the reviewer must be **independent** of the builder — spawn a fresh-context verifier subagent (Agent tool or a Workflow `agent()` with a structured verdict schema), give it the goal + the diff but NOT the builder's reasoning, prompt it to REFUTE the work, and default to fail when uncertain. Independence is the point: a verifier that read the builder's own thinking is no longer independent. When a subagent is genuinely unavailable, fall back to self-critique: find at least 3 concrete flaws and fix them, repeating until a pass finds zero real flaws. Maximum 3 passes either way — do not pad passes with fake flaws to hit the count; "concrete" means reproducible or pointable-to. **Opus overlay:** "this reasoning is clearly right" is not evidence — re-run it. **Sonnet/Haiku overlay:** the verifier subagent should run at a stronger tier than the builder where affordable (verify is the high-leverage stage). **Raise effort before you raise tier:** a critique pass that came back thin re-runs on the SAME model at the next `effort` notch (`low`→`medium`→`high`→`xhigh`→`max`) first — that is usually cheaper than a tier hop and often clears the gate on its own. Only when the same model at `effort: 'max'` still fails does `model-router` get the escalation decision.
+6. **Done = evidence — fresh this turn.** Declare done ONLY when the step-1 done-condition is met AND you quote the execution evidence (command output, exit code, rendered result) **from a run executed in this turn**. A result remembered from an earlier iteration is a premature-done and is rejected (discipline §5). If the verify itself was inconclusive, re-run it at a higher `effort` on the same model before treating "inconclusive" as "passing".
+7. **Honest stop rule.** If the same defect survives 2 fix attempts, STOP. Tell the user plainly: "This task may need a stronger model. What failed: <specific defect and what was tried>." Hand the escalation decision to `model-router` (raise effort one notch on the current model first; escalate ONE tier only on a real signal). **Name the ceiling honestly:** the strongest thing available is **Fable 5 (`claude-fable-5`) at `effort: 'max'`** — when that has been tried and the defect survives, say "this is the ceiling and it did not clear the gate," describe what is still broken, and hand it back to the user. There is no stronger tier to promise. Never fake success, never silently narrow scope to dodge the failure.
 
 ## BUDGET CAPS (keep discipline from becoming waste)
 
@@ -38,16 +41,24 @@ current model tiers, the portable fable-ultra home (`$FU`), and orchestration de
 
 ## MEMORY HOOKS
 
-Resolve the fable-ultra home `$FU` per `knowledge/ai/fable5-discipline.md` §4 (env var →
-legacy `J:\fable 5\fable-ultra` → `%USERPROFILE%\.fable-ultra`).
+Resolve the fable-ultra home `$FU` per `knowledge/ai/fable5-discipline.md` §4 — env
+`FABLE_ULTRA_HOME` → legacy home if present → `%USERPROFILE%\.fable-ultra` on Windows /
+`$HOME/.fable-ultra` on Linux/macOS. Use the doctrine's POSIX block on remote containers; do not
+assume PowerShell exists there.
 
 - **Before starting:** read `$FU\memory\lessons.md` if it exists; apply any lesson relevant to this task type.
   ```powershell
   if (Test-Path "$FU\memory\lessons.md") { Get-Content "$FU\memory\lessons.md" }
   ```
+  ```sh
+  [ -f "$FU/memory/lessons.md" ] && cat "$FU/memory/lessons.md"
+  ```
 - **After finishing (success or stop):** append ONE dated lesson line — what worked / what failed.
   ```powershell
   Add-Content "$FU\memory\lessons.md" "$(Get-Date -Format yyyy-MM-dd) | <task type> | worked: <x> | failed: <y>" -Encoding utf8
+  ```
+  ```sh
+  mkdir -p "$FU/memory" && printf '%s | <task type> | worked: <x> | failed: <y>\n' "$(date +%F)" >> "$FU/memory/lessons.md"
   ```
 - If `lessons.md` exceeds ~200 lines, summarize the oldest half into `lessons-archive.md` first.
 

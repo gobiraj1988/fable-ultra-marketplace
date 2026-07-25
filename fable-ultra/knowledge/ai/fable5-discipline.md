@@ -71,19 +71,36 @@ skill — never trust remembered IDs.
 ## 4. Portable home — no hardcoded machine paths
 
 Run artifacts (lessons, leaderboard, metrics, governance ledger, knowledge lake) live in the
-**fable-ultra home**, resolved in this order:
+**fable-ultra home**, resolved in this order: env `FABLE_ULTRA_HOME` → the legacy home if it
+exists → `~/.fable-ultra`. This plugin runs on Windows **and** on ephemeral Linux remote/web
+containers, so resolve `$FU` in whichever shell you actually have — never assume PowerShell:
 
 ```powershell
+# PowerShell 5.1-safe — '??' is PS7-only, never use it
 $FU = if ($env:FABLE_ULTRA_HOME) { $env:FABLE_ULTRA_HOME }
       elseif (Test-Path 'J:\fable 5\fable-ultra') { 'J:\fable 5\fable-ultra' }  # legacy home
       else { Join-Path $env:USERPROFILE '.fable-ultra' }
 if (-not (Test-Path $FU)) { New-Item -ItemType Directory -Force $FU | Out-Null }
 ```
 
+```sh
+# POSIX equivalent (Linux/macOS containers — $env:USERPROFILE does not exist there)
+if   [ -n "$FABLE_ULTRA_HOME" ];             then FU="$FABLE_ULTRA_HOME"
+elif [ -d "/mnt/j/fable 5/fable-ultra" ];    then FU="/mnt/j/fable 5/fable-ultra"   # legacy home, if mounted
+else FU="$HOME/.fable-ultra"; fi
+mkdir -p "$FU"
+```
+
+When the harness sets `CLAUDE_PLUGIN_ROOT`, **prefer it for READING** plugin-shipped files (skills,
+`knowledge/`, reference scripts) — it is the authoritative install path on every platform. `$FU`
+stays the WRITE target for run artifacts.
+
 Skills say "the fable-ultra home (`$FU`)" and use `$FU\memory\lessons.md`,
-`$FU\memory\leaderboard.md`, `$FU\memory\metrics.md`, `$FU\governance\`, `$FU\knowledge\`.
-Never write run artifacts into the installed plugin directory — installs can be read-only or
-replaced on update.
+`$FU\memory\leaderboard.md`, `$FU\memory\metrics.md`, `$FU\governance\`, `$FU\knowledge\`; the
+same paths with `/` separators on POSIX — match the shell you are in, the paths are identical
+otherwise. Never write run artifacts into the installed plugin directory — installs can be
+read-only or replaced on update. On ephemeral containers `$FU` does not survive the session:
+anything that must outlive it has to be committed (GitHub MCP tools), not just written to disk.
 
 ## 5. Memory hooks (all substantive runs)
 
