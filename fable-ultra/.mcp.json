@@ -1,20 +1,45 @@
 {
   "mcpServers": {
     "fable-ultra-example-local": {
-      "comment": "SAMPLE ONLY — replace with real servers you need. stdio server pattern (Windows-friendly).",
+      "comment": "SAMPLE ONLY — replace with real servers you need. stdio pattern works on Windows/macOS/Linux; point the last arg at YOUR project root (portable default \".\"; Windows example \"J:\\fable 5\" — escape the backslash as J:\\\\fable 5 inside JSON; POSIX example \"/home/user/projects\"). Secrets always via ${ENV_VAR} references, never literal values.",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "J:\\fable 5"]
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
     }
   },
   "_connector_notes": {
-    "how_to_add": "Register servers with `claude mcp add <name> -- <command>` or edit this file. claude.ai connectors (LSEG, Daloopa, GitHub, Notion, Slack, etc.) are authorized in claude.ai connector settings, or via /mcp in an interactive claude session.",
+    "how_to_add": "Register servers with `claude mcp add <name> -- <command>` or edit this file. claude.ai connectors (LSEG, Daloopa, GitHub, Notion, Slack, Figma, Zapier, etc.) are authorized in claude.ai connector settings, or via /mcp in an interactive claude session — they are session-level and must NOT be hardcoded here.",
+    "secrets_rule": "No literal API keys/tokens in this file ever. stdio servers read secrets from the environment (set the env var, reference it in the server's own config); remote servers authenticate via OAuth in an interactive session.",
+    "validation_rule": "Every entry must point to a real, runnable server. Before shipping a change to this file: start the server and call one tool (mcp-connector skill VERIFY stage). Dead or aspirational entries are removed, not kept as decoration.",
+    "discovery": "Discover from inside a session with the harness tools: ListConnectors (what is already wired), SuggestConnectors (recommendations for the current task), SearchMcpRegistry (search the public MCP registry). Deferred tool schemas load on demand via ToolSearch — a tool listed by name only must be loaded with ToolSearch before it can be called. If nothing fits, fall back to the mcp-connector skill's build path.",
+    "remote_sessions": "Remote/web sessions run in ephemeral Linux containers with no gh CLI — GitHub goes through the GitHub MCP server tools (mcp__github__*). Playwright/Chromium is pre-installed (PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers) for browser-driven verification without any install step. Nothing written to the container filesystem survives the session; durable state goes to the repo or a connector.",
+    "zapier_flow": "Zapier MCP is skills-first: list_zapier_skills / get_zapier_skill for saved workflows (create_zapier_skill to save a new one), then discover_zapier_actions -> enable_zapier_action -> execute_zapier_read_action / execute_zapier_write_action; write_code_action for custom logic. Call list_enabled_zapier_actions first so you do not re-enable what is already there. Write actions still pass governance-core gates.",
     "per_skill_requirements": {
-      "software-build": ["github (optional)", "web search (built-in)"],
-      "android-app": ["github (optional)", "figma (optional, for design handoff)"],
-      "trading-bot": ["market data: LSEG plugin or broker MCP or public APIs via WebFetch", "zapier (optional, alerts)"],
-      "agent-system": ["exa/web search", "github (optional)", "zapier (optional)"],
-      "mcp-connector": ["mcp-registry (discovery)", "zapier (9000+ app bridge)"],
-      "astrology-report": ["none required; WebFetch for geocoding, zapier optional for delivery"]
+      "ultra-code": ["none required; Workflow tool (built-in) for opted-in multi-agent runs"],
+      "model-max": ["none required"],
+      "model-router": ["ollama (optional, local models — absent on remote containers)", "other providers only via a connected API key/MCP"],
+      "software-build": ["github MCP (optional)", "web search: built-in WebSearch/WebFetch or exa (web_search_exa/web_fetch_exa)"],
+      "android-app": ["github MCP (optional)", "figma (optional, design handoff: get_design_context/get_screenshot; use_figma writes require the /figma-use skill first)"],
+      "trading-bot": ["market data — LSEG plugin or broker MCP or public APIs via WebFetch; paper/data endpoints only, order execution stays human-gated", "zapier (optional, alerts — skills-first flow)"],
+      "agent-system": ["exa/web search", "github MCP (optional)", "zapier (optional)"],
+      "ai-builder": ["none required — local-first (Ollama, LanceDB/sqlite-vec); claude-api skill for model ids/pricing on API builds", "exa/web search optional for eval data"],
+      "mcp-connector": ["ListConnectors/SuggestConnectors/SearchMcpRegistry (discovery)", "zapier (9000+ app bridge, skills-first)"],
+      "astrology-report": ["none required; WebFetch for geocoding, zapier optional for delivery"],
+      "vision-ocr": ["none required; local tesseract/pdfplumber installs documented in the skill"],
+      "algorithm-factory": ["none required; language-native timers for benchmarks"],
+      "qs-works": ["none required; python+openpyxl documented in the skill", "zapier optional for delivery"],
+      "skill-factory": ["none required"],
+      "agent-factory": ["none required; Agent tool (built-in)"],
+      "workflow-factory": ["none required; Workflow tool (built-in), node for syntax gates"],
+      "knowledge-lake": ["none required; WebFetch/exa for source verification; github MCP optional for durable persistence"],
+      "research-council": ["web search: built-in or exa", "WebFetch for citations"],
+      "dream-factory": ["inherits the connectors of whichever domain skills it drives"],
+      "ecosystem-orchestrator": ["inherits from the skills it chains; governance-core gates apply"],
+      "governance-core": ["none required"],
+      "meta-brain": ["none required"],
+      "self-upgrade": ["none required; github MCP optional to push the upgraded plugin"],
+      "omega-constitution": ["none required"],
+      "ai-os": ["none required"],
+      "fable5-ultra-prompt-engine": ["none required"]
     },
     "rule": "If a skill's required connector is not connected/authorized, the skill STOPS and reports the setup steps. Connector output is never simulated."
   }

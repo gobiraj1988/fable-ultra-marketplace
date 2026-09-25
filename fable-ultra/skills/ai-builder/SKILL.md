@@ -1,11 +1,24 @@
 ---
 name: ai-builder
-description: Build real AI products end to end — LLM apps, chatbots, RAG knowledge-base QA systems, embeddings and semantic search, AI agents, extraction/classification pipelines, and LLM evals. Trigger when the user says "build an AI", "create AI", "make a chatbot", "LLM app", "RAG", "knowledge base QA", "semantic search", "embeddings", "AI agent product", "LLM pipeline", "model eval", or asks whether to fine-tune vs prompt. Small-model-first — architectures that reach near-big-model quality on small/cheap models via decomposition, verification, and escalation routing.
+description: Build real AI products end to end — LLM apps, chatbots, RAG knowledge-base QA systems, embeddings and semantic search, AI agents, extraction/classification pipelines, and LLM evals. Trigger when the user says "build an AI", "create AI", "make a chatbot", "LLM app", "RAG", "knowledge base QA", "semantic search", "embeddings", "AI agent product", "LLM pipeline", "model eval", or asks whether to fine-tune vs prompt. Small-model-first — architectures that reach near-big-model quality on small/cheap models via decomposition, verification, and escalation routing. Do NOT trigger for multi-agent orchestration products (agent-system), MCP servers/connectors (mcp-connector), or storing knowledge (knowledge-lake).
 ---
 
 # AI Builder
 
 Honest scope: this skill builds AI SYSTEMS on top of existing models (API or local). Training a frontier model from scratch is out of scope on consumer hardware — but real AI products do not need that; they need the right architecture around a model that already exists.
+
+## Build order (staged, each gate verified by execution)
+
+Discipline contract: `knowledge/ai/fable5-discipline.md`, with the tier-calibrated overlay (§0)
+applied per stage. Build ONE stage at a time — `INGEST → RETRIEVE/PROCESS → GENERATE → EVAL` —
+and run each stage on real sample data before starting the next (e.g. chunks actually produced and
+inspected before embedding; retrieval hit-rate spot-checked before wiring generation). Plan first:
+architecture-picker row chosen, component list and eval design written BEFORE code. Model selection
+routes through `model-router`; production API spend gets a `governance-core` budget cap; the
+verifier and escalation passes below can run as structured-output Workflow subagents on large
+builds. **Eval gate is tier-blind in standard but execution-fresh:** the measured numbers must come
+from an eval run executed this turn (§5) — on Sonnet especially, do not cite scores remembered from
+an earlier run.
 
 ## Architecture picker
 
@@ -49,6 +62,7 @@ This is the heart of the skill: near-big-model quality at a fraction of the cost
 ## Evals are mandatory
 
 - No AI feature ships without a golden test set and a measured score. "It looked good on three examples" is not a score.
+- "Done" requires the eval script actually EXECUTED end-to-end against the built pipeline, with the measured numbers pasted from its real output (`<command> → exit 0 → "<scores>"`) — a designed-but-unrun eval does not count.
 - Deterministic checks first (exact match, schema validity, citation presence). LLM-as-judge is acceptable for subjective quality — but spot-check the judge against human review on a sample before trusting it.
 - Re-run the eval after every prompt or model change; keep scores in a file next to the code.
 

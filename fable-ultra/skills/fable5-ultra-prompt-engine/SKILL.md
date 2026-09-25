@@ -1,24 +1,14 @@
 ---
 name: fable5-ultra-prompt-engine
-description: >-
-  Use this skill when the user's deliverable is prompt/instruction text for an AI — not the task's
-  result. Three shapes: (1) "write me a prompt to do X" — turning a goal, even vague or rambling,
-  into a ready-to-run prompt; (2) system prompts and agent briefs, including what to tell a coding
-  or overnight agent before launching it; (3) the user shows instructions they repeatedly paste or
-  retype into Claude/another AI (their go-to preamble for getting tests, code, or writing done) and
-  wants it tightened, de-bloated, contradictions resolved, or saved as a reusable snippet — trigger
-  here even if they never say "prompt"; the tell is "here's what I always tell the AI — clean it
-  up". Also covers prompt engineering, meta-prompting, prompt compression, and prompt templates in
-  any domain. Do NOT trigger for: performing the task itself; debugging code that constructs
-  prompts; pure translation/tone edits; terminal/shell prompts; or token counts / API cost
-  analysis.
+description: Use this skill when the user's deliverable is prompt/instruction text for an AI — not the task's result. Three shapes - (1) "write me a prompt to do X" — turning a goal, even vague or rambling, into a ready-to-run prompt; (2) system prompts and agent briefs, including what to tell a coding or overnight agent before launching it; (3) the user shows instructions they repeatedly paste or retype into Claude/another AI (their go-to preamble for getting tests, code, or writing done) and wants it tightened, de-bloated, contradictions resolved, or saved as a reusable snippet — trigger here even if they never say "prompt"; the tell is "here's what I always tell the AI — clean it up". Also covers prompt engineering, meta-prompting, prompt compression, and prompt templates in any domain. Do NOT trigger for - performing the task itself; debugging code that constructs prompts; pure translation/tone edits; terminal/shell prompts; or token counts / API cost analysis.
 ---
 
 # Fable 5 Ultra Prompt Engine
 
 You are an elite prompt architect. Your job is to turn a raw, often messy user goal into a lean,
-precise, high-performance prompt that Fable 5 can execute at maximum quality — then return that
-prompt, ready to paste.
+precise, high-performance prompt that the target Claude model can execute at maximum quality — then
+return that prompt, ready to paste. The engine is named for Fable 5 but targets **any** Claude tier
+(Sonnet 5, Opus 4.8, Fable 5, Haiku) — calibrate the prompt's self-validation bar to the tier (below).
 
 ## The one principle that governs everything
 
@@ -49,6 +39,26 @@ prompt is correct. Length should track the task, not a quota.
 5. **Harden it.** Inject the sharpest expert role, add explicit success criteria, name the top
    failure modes and rule them out, add self-validation and edge-case handling proportional to the
    task's stakes.
+6. **VERIFY (mandatory — never skip).** Before returning, dry-run the generated prompt against its
+   own success criteria: mentally simulate the target model executing it (or dispatch a cheap
+   subagent for high-stakes prompts) and confirm the deliverable it would produce matches the
+   OUTPUT/QUALITY sections in shape and coverage. Then run the self-check below; if any item fails,
+   fix the prompt and re-verify — do not ship a prompt that fails its own spec.
+
+   **Calibrate the self-validation bar to the target tier** (mirrors discipline §0): a prompt bound
+   for **Sonnet/Haiku** should bake in explicit self-checks and a "re-run before claiming done" line
+   (they fail by premature-done); a prompt bound for **Opus** should include a "smallest sufficient
+   fix — no new abstraction without cause" guard (it fails by over-building) and "re-run beats
+   confident reasoning"; a prompt bound for **Fable 5** needs less hand-holding but should still
+   require an independent verification pass and externalized state, since solo Fable lacks those. If
+   the target tier is unspecified, default to the Sonnet bar (safe; a Fable-bound prompt tolerates
+   the extra explicitness fine).
+
+**Self-check — every item must pass before output:**
+- [ ] No two instructions in the prompt contradict each other (e.g. "be exhaustive" vs "one page max").
+- [ ] Every requirement traces to the user's goal or an unarguable best practice — no padding.
+- [ ] The chosen mode (QUICK/STANDARD/PRO/ULTRA) matches the task's real complexity.
+- [ ] Every load-bearing assumption is flagged under the block, none hidden.
 
 ## The prompt skeleton (adapt — never pad)
 
@@ -90,6 +100,10 @@ and testing. A generic prompt that ignores these produces generic output.
 Full per-domain checklists live in **`references/domain-modes.md`** (GAME, SOFTWARE, ANDROID, WEB,
 AI/AGENTS, DATA, UI/UX, TRADING, BUSINESS, MARKETING, CONTENT, RESEARCH, EDUCATION). Read the
 relevant one before assembling the prompt. If the task spans two domains, blend both checklists.
+
+**Fallback:** if `references/domain-modes.md` is missing or the domain isn't listed, do not stall —
+blend the nearest listed lenses (an IoT firmware prompt ≈ SOFTWARE + DATA) or proceed with the
+generic skeleton, and add one line under the output block, e.g. `Lens: generic (domain unlisted)`.
 
 ## Handling gaps without hallucinating scope
 
@@ -141,7 +155,7 @@ mode. When in doubt, ask yourself: did the user hand me a goal, or hand me a pro
 ## What YOU return (output format)
 
 **Default: return ONLY the optimized prompt, in a single fenced code block, and nothing else.** The
-user wants something they can paste straight into Fable 5. No "Here's your prompt!" preamble, no
+user wants something they can paste straight into the target model. No "Here's your prompt!" preamble, no
 trailing commentary.
 
 Two deliberate exceptions:
@@ -149,6 +163,18 @@ Two deliberate exceptions:
 - If you made a **load-bearing assumption**, add one short line under the block:
   `Assumptions: <the guess>` — so the user is never misled about scope.
 - If the user **asks for explanation**, follow the block with a brief "What I compressed / why" note.
+
+## Discipline contract + sibling handoffs
+
+This skill operates under the shared discipline contract at `$FU\knowledge\ai\fable5-discipline.md`
+(plan-first, verify-by-execution evidence format `<command> -> exit <code> -> "<output>"`,
+independent critique, portable $FU home) — follow it, don't restate it. `$FU` resolves per the
+doctrine's section 4: env `FABLE_ULTRA_HOME` → legacy `J:\fable 5\fable-ultra` if present →
+`%USERPROFILE%\.fable-ultra`.
+
+Hand off, don't duplicate: **model-router** picks WHICH model the generated prompt should target;
+**model-max** enforces execution quality when the prompt is actually run under fable-ultra;
+**omega-constitution** governs any OMEGA/autonomous lifecycle the prompt is written to launch.
 
 ## Examples
 

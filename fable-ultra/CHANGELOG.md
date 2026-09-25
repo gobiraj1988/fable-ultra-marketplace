@@ -1,5 +1,215 @@
 # Changelog — fable-ultra
 
+## 5.1.0 — 2026-07-25 — merge: v5 tier discipline + the v4.2.0 correctness/connector line
+
+Two lineages both forked from 4.1.5 — v5.0.0 (tier-calibrated discipline) and a parallel 4.2.0
+(harness-truth + connector + portability fixes). This release is the merge: v5.0.0 is the base and
+every v5 advance is preserved untouched; the 4.2.0 line is ported on top. Skill count stays **26**.
+
+Ported onto the v5 base, in three file groups with an adversarial verifier per group:
+
+- **Harness truth.** Three skills asserted "there is NO standalone Workflow `resumeFromRunId`
+  recovery tool" / "never assume a resume capability that is not present". Resume IS real, so the
+  claim cost real money — a crashed run was told to relaunch from zero instead of replaying its
+  cached `agent()` prefix from `journal.jsonl`. `workflow-factory`, `ecosystem-orchestrator` and
+  `meta-brain` now teach resume-first recovery, with the run-state file demoted to a supplement.
+  `meta-brain`'s phantom `mcp__scheduled-tasks__*` tool is replaced by the real CronCreate /
+  ScheduleWakeup / Monitor, plus TaskOutput/TaskUpdate and SendMessage steering of live agents.
+- **The dry-run gate now actually gates (verified by execution).** `workflow-factory`'s template
+  gate had three defects, all caught by the group's own adversarial verifier and each fixed and
+  re-proven: (1) the POSIX block referenced `$STUBS`/`$GUARD` that were only ever defined as
+  PowerShell variables, so on Linux it wrote a file that declared `__wf` and never called it —
+  a deliberately broken template exited 0 printing nothing (**false pass**); (2) the stub `budget`
+  lacked `spent()`, falsely rejecting any template that reports spend; (3) the `workflow` global
+  was missing, falsely rejecting nesting templates. Now: good → `DRY-RUN PASS` exit 0; broken →
+  `DRY-RUN FAIL - this template is broken` exit 1; `budget.spent()` and `workflow()` both pass.
+  A silent exit 0 with no PASS line is now itself defined as a FAIL. (Law 02 again: a verification
+  tool must itself be verified.)
+- **Connector layer rebuilt.** `.mcp.json`'s per-skill map went from 7 entries to **26** (verified
+  by set-diff against `skills/`), keeping v5's own additions (secrets env-only, every entry must
+  answer a real tool call before shipping, session-level connectors, paper/data-scoped trading).
+  Added current discovery (`ListConnectors`/`SuggestConnectors`/`SearchMcpRegistry` + `ToolSearch`
+  deferred loading), the Zapier skills-first flow, bidirectional Figma with `/figma-use` required
+  before `use_figma`, and remote-session facts (Linux containers, GitHub via `mcp__github__*`,
+  Playwright pre-installed). `mcp-connector` updated to match.
+- **Both routing dials, everywhere.** `effort` now appears in 12 files (was 2), `isolation:'worktree'`
+  in 8, `agentType` in 5. Adversarial seats route to `model:'fable'` + `effort:'max'`
+  (research-council, agent-factory, agent-system); the ultra-code script runs plan/verify/review at
+  `effort:'high'` and logs `budget.spent()` per iteration; governance-core counts worktree runs,
+  fable-tier runs and high-effort agents as expensive-class cost drivers.
+- **Cross-platform for real.** v5's `$FU` home resolved through PowerShell-only calls
+  (`Test-Path`, `$env:USERPROFILE`) and could not resolve on the Linux containers this plugin also
+  runs in. Every `$FU` block, ledger/audit/metrics append and validator now carries a POSIX
+  equivalent, and PowerShell stays 5.1-safe (no PS7 `??`).
+- **Docs/manifest.** Restored two CHANGELOG headings that had gone missing (4.2.0 and 4.1.5 content
+  was hanging under 4.2.1). README install steps are placeholder-based with Windows + POSIX
+  examples plus a GitHub-marketplace option, and the stale "~5-min cache window" pacing advice is
+  replaced with match-the-wait-to-what-you-are-waiting-for. The manifest's performance claim
+  ("Sonnet 5/Opus 4.8 match-or-exceed solo Fable 5") is softened to the mechanism it implements —
+  no benchmark data ships in this package, and Law 1 forbids unmeasured benchmark claims. The
+  mechanism, and every honest hedge around it, is unchanged in the README and discipline file.
+
+Deliberately unchanged: skill count (26), every safety rail (paper-mode default, human
+confirmation for irreversible actions, no fabricated output, loop ceilings), and all v5 discipline
+(tier overlay, fresh-this-turn done-gate, resume-safe reconstruction, independent critique, staged
+domain gates, loop pathologies, backtest plausibility screen, ledger recompute).
+
+Verified: 26/26 frontmatters strict-YAML parse (longest description 1013 ≤ 1024); manifest
+description 471 ≤ 500; `.mcp.json` and `marketplace.json` valid JSON with a 26-entry connector map;
+workflow script passes the wrapped node ESM check; dry-run gate proven on 4 template cases;
+GFM table column counts correct; zero stale-claim matches remaining.
+
+## 5.0.0 — 2026-07-20 — the tier-calibrated discipline overlay (Fable-Ultra 5)
+
+The headline advance: process failures are NOT tier-agnostic, so the discipline no longer is
+either. A new **§0 tier-calibrated overlay** in `knowledge/ai/fable5-discipline.md` matches each
+tier's characteristic solo failure to a concrete countermeasure, and every engine loads the row
+for the active tier at the start of a run. This is the mechanism behind the (sharply honest) claim
+that **on multi-step verifiable build loops, Sonnet 5 or Opus 4.8 running fable-ultra's scaffolding
+can match-or-exceed a *solo* Fable 5** — because on exactly those tasks process/verification
+failures dominate over raw-reasoning failures. It does NOT claim parity on one-shot raw reasoning
+(there Fable still wins) and changes no model weights (OMEGA Law 1).
+
+The overlay table:
+
+| Tier | Its characteristic solo failure | Overlay countermeasure |
+|---|---|---|
+| Sonnet 5 | Asserts "done" from an earlier run's memory; loses the plan on long horizons | Fresh re-run before any done-claim (§5) + re-derive plan/state from on-disk `ultra-code-run.md` each step (§7) |
+| Opus 4.8 | Over-architects routine work; trusts confident reasoning over a re-run; agreeable when it should push back | Smallest-sufficient-design guard + re-run beats reasoning + steel-man disagreement |
+| Fable 5 | Highest raw capability solo, but no forced adversarial verify / externalized state / cross-run memory | Still force independent verify + on-disk state + lessons memory (what fable-ultra adds over solo Fable) |
+| Haiku 4.5 | Formatting slips; loses multi-step coherence | Narrow mechanical stages; one schema'd call; escalate early |
+
+Changes (additive; no new skills; skill count stays **26**; all safety rails immutable):
+
+- **NEW `knowledge/ai/fable5-discipline.md` §0** — the tier-calibrated overlay table (above).
+- **Strengthened discipline §5** — the done-gate is now HARD: a done-claim must be preceded by a
+  re-run executed THIS turn, never a memory of an earlier run (the #1 Sonnet failure).
+- **NEW discipline §7** — resume-safe reconstruction: after any context compaction / new session /
+  `resumeFromRunId` mismatch, re-derive plan+state from the on-disk `ultra-code-run.md`, re-check
+  it against the original goal, and re-VERIFY the last "done" item fresh before continuing — never
+  splice from conversational memory.
+- **NEW discipline §1.4** — independent critique now means the verifier is NOT shown the builder's
+  reasoning (goal + diff only); independence is the point.
+- `model-max` — THE MAX LOOP gains **step 0 "Detect tier, load overlay"**; per-tier emphasis
+  (Opus smallest-sufficient-design at plan; Sonnet on-disk re-derivation each item; fresh-this-turn
+  done). Failure-mode table reorganized by tier.
+- `ultra-code` — "model-max + memory hooks" section now covers tier detection + resume-safe
+  reconstruction; **NEW loop pathology "premature done (carried-evidence)"** — REVIEW may not close
+  the done-condition citing evidence from an earlier iteration; re-verify fresh this iteration.
+- `ultra-code/scripts/ultra-code-workflow.js` — every build/verify/review `agent()` now carries a
+  `TIER_PREAMBLE` (verify-by-execution-this-turn; Sonnet re-derive-from-disk; Opus smallest-fix;
+  independent verifier not shown builder reasoning). REVIEW prompt rejects carried-evidence.
+  Schemas unchanged; `node --check` passes.
+- `model-router` — **NEW "RIGHT TIER, RIGHT EFFORT, RIGHT OVERHEAD"** section: overhead (scaffolding
+  cost) is a real third lever — light-touch on Opus/routine, full scaffolding on Sonnet/Haiku (it is
+  what closes the gap), forced adversarial verify still mandatory for Opus/Fable on judge/hard work.
+  ROUTE template gains an OVERLAY line.
+- `self-upgrade` — the discipline overlay file is now a **first-class upgrade target** (not just
+  SKILL.md); evidence-gathering tags observations by tier so recurring same-tier failures can
+  sharpen an overlay row. Backup/restore generalized to a resolved `$TARGET` path. One-cycle-per-
+  request and immutable rails preserved.
+- `fable5-ultra-prompt-engine` — generalized "Fable 5" → any Claude tier; the VERIFY step now
+  **calibrates the prompt's self-validation bar to the target tier** (Sonnet/Haiku: bake in
+  self-checks + re-run-before-done; Opus: smallest-fix guard; Fable: still require independent
+  verify). Skeleton and examples unchanged.
+- `ai-os` — one new rule→enforcer row for TIER-CALIBRATION; otherwise unchanged.
+- Domain skills (`software-build`, `android-app`, `trading-bot`, `ai-builder`) — each now applies
+  the tier overlay and the fresh-this-turn done-gate. On `trading-bot` the executed-vs-described
+  gate is named the prime rail on Sonnet; the backtest plausibility screen and all safety rails
+  are immutable and unchanged.
+
+Verified before packaging (dogfooding the plugin's own shipping gates): `python -m json.tool`
+manifest OK (description 406 chars, ≤500); every edited SKILL.md frontmatter parses as strict YAML
+with `name`+`description` present, no tabs, no colon-space in the description value, every
+description ≤1024 chars; `node --check` on the workflow script passes; skill count still 26.
+
+What was deliberately NOT changed: skill count (26 — faithful to the OMEGA PRIME Evolution rule:
+evolve via better verification/memory, not more layers), every safety rail (paper-mode-default,
+human-confirmation-for-irreversible, no-fabricated-output, loop ceilings), and the Claude
+Code-specific tool surface (`/model`, Workflow `agent()`/`pipeline()`, `/loop`, `claude plugin`).
+The tool-surface references are preserved as-is because this plugin targets Claude Code's model
+surface; a ZCode-tool-surface port is a separate, larger migration and is out of scope here.
+
+## 4.2.3 — 2026-07-12 — trading-bot backtest plausibility screen (self-upgrade cycle)
+
+- `trading-bot` BACKTEST gate: executed metrics are now necessary but NOT sufficient —
+  suspiciously good results (Sharpe > 3, near-zero max drawdown, win rate > 80% on daily bars,
+  loss-free equity curves) FAIL the gate until the leak is found (look-ahead, label timing,
+  fills, survivorship, duplicated data) or the exception is precisely documented. Paper-first
+  rails and per-action human sign-off unchanged.
+- Eval: scenario — a leaked backtest printing Sharpe 5.2 passed the old gate (executed = pass);
+  it now fails with a named hunt list. Aligned with the 2026-07-03 lesson: honest metrics catch
+  bad strategies early.
+- Self-upgrade queue from the 4.2.0 re-audit is now EMPTY (governance-core 4.2.1, ultra-code
+  4.2.2, trading-bot 4.2.3). Next cycles should draw from fresh run evidence, not this list.
+
+## 4.2.2 — 2026-07-12 — ultra-code loop-pathology rules (self-upgrade cycle)
+
+- `ultra-code` Termination: three in-loop pathologies now have explicit detect+break rules —
+  flaky VERIFY (re-run once; flipping verdict = FLAKY, cause-pinning becomes its own item, a
+  flaky pass is never evidence), oscillating fix-break (same change flipping direction across 2
+  iterations → merge the items with a joint done-condition), and review inflation (2 consecutive
+  REVIEW passes adding items while the done-condition already holds → declare done, extras
+  become optional follow-ups). Iteration ceiling (10) and dry-round (2) rails unchanged.
+- Eval: scenario coverage 0/3 → 3/3 against the re-audit finding; real-session evidence — this
+  session's own mid-patch validation snapshot was exactly the "mid-write reads" flaky case.
+- Remaining queued target: trading-bot backtest plausibility threshold (4.2.3).
+
+## 4.2.1 — 2026-07-12 — governance-core budget hard-stop hardened (self-upgrade cycle)
+
+Target chosen from the 4.2.0 re-audit's remaining-weakness list; strengthens a gate, does not
+weaken it (section-6 rail intact; user-directed cycle).
+
+- `governance-core` §3: the hard-stop check now RECOMPUTES the spend total from every est-cost
+  row instead of trusting the last row's manually-written running-total. A caller's arithmetic
+  or formatting slip can no longer silently defeat the limit; stated-vs-recomputed drift is
+  reported and the recomputed value wins.
+- Verified by execution before keeping: corrupt ledger (true spend 22.00 over a 20.00 limit,
+  last row falsely stating 4.80) — OLD check printed "BUDGET OK 4.8 of 20"; NEW check printed
+  "LEDGER DRIFT ... recomputed 22" + "HARD-STOP BLOCK recomputed-total 22 >= limit 20". Healthy
+  ledger still passes with no false drift.
+- Next queued targets (not in this cycle): ultra-code flaky-VERIFY/oscillation handling;
+  trading-bot plausibility threshold for suspiciously good backtests (e.g. Sharpe > 3).
+
+## 4.2.0 — 2026-07-12 — model-agnostic discipline contract + full 26-skill audit upgrade
+
+Full-plugin upgrade driven by a formal 26-skill audit (5 axes: trigger clarity, process
+discipline, verify-by-execution, failure modes, modern orchestration; per-skill scores and gaps
+recorded before editing). Goal: ANY selected model (Haiku/Sonnet 5/Opus/Fable 5) executes at
+Fable-5-grade discipline — explicitly model-agnostic, not Sonnet-specific.
+
+- **NEW `knowledge/ai/fable5-discipline.md`** — the shared model-agnostic execution contract:
+  plan-first, one-item-at-a-time, verify-by-execution with a single evidence format
+  (`<command> → exit <code> → "<output>"`), independent/adversarial critique, honest stop rule,
+  current model tier map (claude-fable-5 / claude-opus-4-8 / claude-sonnet-5 /
+  claude-haiku-4-5), per-stage `effort` routing, Workflow orchestration defaults, and the
+  **portable fable-ultra home `$FU`** (env FABLE_ULTRA_HOME → legacy `J:\fable 5\fable-ultra` →
+  `%USERPROFILE%\.fable-ultra`). All skills now reference it instead of restating process rules.
+- **Core engines hand-upgraded:** `model-max` (adversarial verifier subagent option, budget
+  caps, escalation hand-off to model-router, portable memory paths, anti-double-load trigger),
+  `model-router` (current model IDs + /fast note, per-stage effort as a second routing lever,
+  mandatory ROUTE/GATE/WHY/FALLBACK decision template, governance-core spend hook, portable
+  leaderboard path), `ultra-code` (stage-gate rules for inline runs, concrete VERIFY evidence
+  format, REVIEW independence requirement, effort routing + `workflow()` sub-pipelines,
+  missing-file fallbacks).
+- **Domain skills hand-upgraded:** `android-app` (staged PLAN→SCAFFOLD→FEATURE→VERIFY→RELEASE
+  gates, gradlew-executed verification, Android failure-mode table, negative triggers),
+  `trading-bot` (every stage now gated on EXECUTED evidence — backtest/risk/kill-switch must
+  actually run; walk-forward + sensitivity grid; governance-core NEEDS-APPROVAL for live;
+  honest "AGI trader" boundary), `algorithm-factory` (promote threshold fixed at DEFINE, N≥5
+  runs median+spread, warmup/overfit guards, null-result path, Workflow fan-out + verifier),
+  `software-build` (stop/report protocol, e2e delivery evidence bar, negative triggers),
+  `ai-builder` (staged INGEST→RETRIEVE→GENERATE→EVAL gates, executed-eval done-bar, router +
+  governance hooks, negative triggers), `agent-system` (staged build, failure-mode table
+  incl. reward hacking/memory poisoning, executed baseline scores required, negative triggers).
+- **17 remaining skills patched** against their audit gaps (negative triggers, verify sections,
+  executable checks, budget/governance hooks, portable `$FU` paths, research-council role-count
+  fix, workflow-factory dry-run path fix) — each patch verified by an independent checker agent.
+- **`.mcp.json`** — secrets rule (env-only, never literal), validation rule (every entry must
+  start and answer a tool call before shipping), mcp-registry discovery note, claude.ai
+  connectors explicitly session-level (never hardcoded), ai-builder row added, trading data
+  connectors scoped to paper/data (execution stays human-gated).
+
 ## 4.1.5 — 2026-07-07 — full-plugin audit fixes (6 verified defects)
 
 Five-dimension adversarial audit (cross-refs, code snippets, paths, docs, triggers). Confirmed

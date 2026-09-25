@@ -49,15 +49,21 @@ fable-ultra/
 
 ## Install
 
-From a local marketplace or directly:
+From the GitHub marketplace, a local marketplace, or directly:
 
-```powershell
-# Option A: add this folder as a local plugin marketplace, then install
-claude plugin marketplace add "J:\fable 5"
+```sh
+# Option A: add the marketplace folder as a local plugin marketplace, then install
+# (path examples — Windows: "J:\fable 5"  |  POSIX: ~/fable-ultra-marketplace)
+claude plugin marketplace add "<path-to-marketplace-folder>"
 claude plugin install fable-ultra
 
 # Option B (dev): load it for one session
-claude --plugin-dir "J:\fable 5\fable-ultra"
+# Windows: claude --plugin-dir "J:\fable 5\fable-ultra"
+claude --plugin-dir "<path-to-marketplace-folder>/fable-ultra"
+
+# Option C: install straight from the GitHub marketplace repo
+claude plugin marketplace add gobiraj1988/fable-ultra-marketplace
+claude plugin install fable-ultra@fable-ultra-marketplace
 ```
 
 Then `/ultra-code <your goal>` or just describe a task — skills trigger by description.
@@ -76,10 +82,12 @@ For work spanning sessions, pair it with the `/loop` skill (self-paced wakeups) 
 
 ## How the token savings work
 
-Not magic — mechanics: prompt-cache-aware pacing (stay inside the ~5-min cache window or commit
-to long sleeps), scoped file reads, bulk search delegated to subagents so the main context stays
-lean, structured-output schemas between workflow stages, Workflow `resumeFromRunId` so re-runs
-hit cache on unchanged steps, and budget-guarded loops with hard ceilings.
+Not magic — mechanics: match-the-wait-to-what-you-are-waiting-for pacing (one long check beats
+many short polls; cache TTL varies by surface, so never design the loop around a fixed cache
+window), scoped file reads, bulk search delegated to subagents so the main context stays lean,
+structured-output schemas between workflow stages, per-stage model + reasoning-effort routing
+(cheap stages low, verify stages high), Workflow `resumeFromRunId` so re-runs hit cache on
+unchanged steps, and budget-guarded loops with hard ceilings (the in-run `budget` global).
 
 ## Required connectors
 
@@ -95,16 +103,31 @@ settings; local servers via `claude mcp add` or `/mcp` in an interactive session
 - Destructive/outward-facing actions get confirmation unless you durably authorized them.
 - Every ultra-code run keeps an audit trail (`ultra-code-run.md`) in the project.
 
+## v5: tier-calibrated discipline (the "better than solo Fable 5 on Sonnet/Opus" advance)
+
+- **Tier-calibrated overlay** (v5.0) — process failures are not tier-agnostic, so the discipline
+  no longer is either. `knowledge/ai/fable5-discipline.md` §0 matches each tier's characteristic
+  solo failure to a concrete countermeasure, loaded at the start of every run: **Sonnet 5** gets a
+  fresh-re-run-before-done gate + on-disk plan re-derivation each step (kills premature-done and
+  context-loss); **Opus 4.8** gets a smallest-sufficient-design guard + re-run-beats-reasoning
+  (kills over-engineering); **Fable 5** still gets forced independent verify + externalized state
+  (what fable-ultra adds over solo Fable). The sharply-honest claim: on multi-step *verifiable*
+  build loops, Sonnet 5 / Opus 4.8 running this scaffolding can match-or-exceed a **solo** Fable 5 —
+  process/verification failures dominate there. It does not claim parity on one-shot raw reasoning,
+  and changes no model weights.
+
 ## v2: any-model quality + self-improvement
 
 - **model-max** — most of the quality gap between model tiers on agentic work is *process*
   failure (no plan, no verification, fake "done", lost context). model-max forces the same
   strict loop on every model: plan -> small verified increments -> self-critique -> evidence-based
   done -> honest escalation when a task exceeds the model. It narrows the gap substantially;
-  it does not literally change model weights.
+  it does not literally change model weights. (v5: it now detects the tier first and loads the
+  matched overlay countermeasure.)
 - **self-upgrade** — the plugin edits its own skill files under eval gates: one focused change
   per cycle, kept only if a before/after eval shows improvement, safety rails immutable,
-  everything versioned in CHANGELOG.md. Real self-modification, honestly scoped.
+  everything versioned in CHANGELOG.md. Real self-modification, honestly scoped. (v5: the
+  discipline overlay file is now a first-class upgrade target alongside SKILL.md.)
 - **lessons memory** — every run appends a lesson; every run starts by reading them. The plugin
   gets sharper with use.
 

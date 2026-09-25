@@ -1,6 +1,13 @@
 // Reference ultra-code Workflow script — PLAN -> BUILD -> VERIFY -> REVIEW -> LOOP.
 // Adapt stage prompts/schemas to the actual task before running. Plain JS (no TS).
 // Pass the goal via args: Workflow({script, args: {goal: "...", maxIterations: 10}}).
+//
+// Routing: model: is omitted so every agent inherits the session tier; effort: is set per stage
+// (plan/verify/review run 'high', BUILD inherits — mechanical items can drop to 'low').
+// Add isolation:'worktree' to the BUILD agent ONLY when parallel work items mutate the SAME
+// files — each gets a fresh git worktree, which is expensive, so don't set it by default.
+// Determinism: Date.now(), Math.random(), and argless new Date() THROW inside a workflow script
+// (they would break resumeFromRunId replay) — pass any timestamp/seed in through args.
 
 export const meta = {
   name: 'ultra-code',
@@ -78,7 +85,7 @@ const plan = await agent(
   `Decompose this goal into independent, concretely-scoped work items with a measurable ` +
   `done-condition. Goal: ${goal}. Safety: if the goal involves trading or money movement, every ` +
   `work item must specify paper/dry-run mode; live trading is out of scope.`,
-  { label: 'plan', schema: PLAN_SCHEMA }
+  { label: 'plan', phase: 'Plan', effort: 'high', schema: PLAN_SCHEMA }
 )
 log(`Plan: ${plan.workItems.length} items. Done when: ${plan.doneCondition}`)
 
@@ -89,6 +96,15 @@ const blocked = []
 let dryRounds = 0
 let iter = 0
 
+// v5 tier-overlay preamble — every build/verify agent gets it. Omit model: to inherit the
+// session tier; the preamble calibrates that tier's characteristic failure mode (discipline §0).
+const TIER_PREAMBLE =
+  `Discipline (fable5-discipline.md §0/§5): verify by execution THIS turn — never claim done ` +
+  `from a remembered earlier run. If this is Sonnet, re-derive plan/state from the on-disk ` +
+  `ultra-code-run.md before acting; if Opus, prefer the smallest sufficient fix and treat a ` +
+  `fresh re-run as outranking a confident argument. Independent verifiers REFUTE and must not ` +
+  `be shown the builder's reasoning.`
+
 while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
   iter++
   log(`Iteration ${iter}: ${queue.length} work items`)
@@ -98,18 +114,24 @@ while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
     queue,
     (item) =>
       agent(
+        `${TIER_PREAMBLE}\n\n` +
         `Execute this work item toward the goal "${goal}". Item: ${JSON.stringify(item)}. ` +
         `Make real changes with tools. If a required MCP connector or credential is missing, ` +
         `return status "blocked" with the exact setup step — never simulate its output.`,
+        // Add isolation: 'worktree' here when parallel items touch the same files; add
+        // effort: 'low' for mechanical items; agentType: '<registered subagent>' to reuse one.
         { label: `build:${item.id}`, phase: 'Build', schema: BUILD_SCHEMA }
       ),
     (built, item) =>
       built.status === 'blocked'
         ? { built, verdict: { passes: false, defects: ['BLOCKED: ' + (built.blockedReason || 'unknown')] }, item }
         : agent(
+            `${TIER_PREAMBLE}\n\n` +
             `Adversarially verify work item "${item.task}" (files: ${JSON.stringify(built.filesTouched || [])}). ` +
-            `Run the code/tests where possible. Try to REFUTE that it works. Default passes=false if uncertain.`,
-            { label: `verify:${item.id}`, phase: 'Verify', schema: VERDICT_SCHEMA }
+            `You are an INDEPENDENT verifier — you are given the goal and the files but NOT the builder's ` +
+            `reasoning. Run the code/tests where possible THIS turn. Try to REFUTE that it works. ` +
+            `Default passes=false if uncertain.`,
+            { label: `verify:${item.id}`, phase: 'Verify', effort: 'high', schema: VERDICT_SCHEMA }
           ).then((verdict) => ({ built, verdict, item }))
   )
 
@@ -124,15 +146,27 @@ while (queue.length > 0 && iter < MAX_ITER && dryRounds < 2) {
   // REVIEW: completeness critic — barrier justified (needs full state to judge done-condition).
   phase('Review')
   const review = await agent(
+    `${TIER_PREAMBLE}\n\n` +
     `Completeness critic. Goal: "${goal}". Done-condition: "${plan.doneCondition}". ` +
     `Completed: ${JSON.stringify(completed.map((c) => c.item.task))}. ` +
     `Pending fixes: ${JSON.stringify(failed.map((f) => f.task))}. Blocked: ${blocked.length}. ` +
-    `Return ONLY genuinely-missing work items (empty array if the done-condition is met once fixes land).`,
-    { label: `review:${iter}`, phase: 'Review', schema: REVIEW_SCHEMA }
+    `Return ONLY genuinely-missing work items (empty array if the done-condition is met once fixes land). ` +
+    `Do NOT accept a completed item as closing the done-condition unless it was verified fresh this ` +
+    `iteration — carried-evidence is a premature-done and must be returned as a missing work item ` +
+    `(re-verify: <item id>) instead.`,
+    { label: `review:${iter}`, phase: 'Review', effort: 'high', schema: REVIEW_SCHEMA }
   )
 
   queue = [...failed, ...review.newWorkItems]
   dryRounds = queue.length === 0 ? dryRounds + 1 : 0
+
+  // Per-iteration spend report — only meaningful when the user set a token target.
+  if (budget.total) {
+    log(
+      `Iteration ${iter} spend: ${Math.round(budget.spent() / 1000)}k of ` +
+      `${Math.round(budget.total / 1000)}k (${Math.round(budget.remaining() / 1000)}k left)`
+    )
+  }
 
   // Budget guard: hard-stop before overrunning a user token target.
   if (budget.total && budget.remaining() < 50000) {
